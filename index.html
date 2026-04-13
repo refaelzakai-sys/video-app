@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VideoChat - משתמשים</title>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+    <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
+    
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; background: #f4f4f4; margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        
+        /* מסך הרשמה */
+        #setup-screen { position: fixed; inset: 0; background: #fff; z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 20px; }
+        .form-card { width: 100%; max-width: 400px; border: 1px solid #ddd; padding: 25px; border-radius: 12px; background: #fff; box-shadow: 0 8px 20px rgba(0,0,0,0.1); }
+        .form-card h2 { text-align: center; color: #ff8000; margin-bottom: 20px; }
+        .field { margin-bottom: 15px; }
+        .field label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 14px; }
+        .field input, .field select { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; outline: none; }
+
+        /* אזור הוידאו */
+        .video-grid { display: flex; flex: 1; background: #000; gap: 2px; }
+        @media (max-width: 768px) { .video-grid { flex-direction: column; } }
+        
+        .video-box { flex: 1; position: relative; background: #1a1a1a; }
+        video { width: 100%; height: 100%; object-fit: cover; }
+        .info-tag { position: absolute; top: 15px; right: 15px; background: rgba(0,0,0,0.7); color: #fff; padding: 5px 12px; border-radius: 20px; font-size: 13px; }
+
+        /* כפתורים */
+        .controls { display: flex; padding: 15px; background: #fff; gap: 12px; border-top: 1px solid #ddd; }
+        button { padding: 12px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 16px; transition: background 0.3s; }
+        .btn-start { background: #ff8000; color: white; flex: 2; }
+        .btn-report { background: #e74c3c; color: white; flex: 1; }
+        .btn-switch { background: #7f8c8d; color: white; }
+        button:disabled { background: #bdc3c7; cursor: not-allowed; }
+
+        /* צ'אט */
+        #chat-section { height: 160px; background: #fff; display: none; flex-direction: column; border-top: 2px solid #ff8000; }
+        #messages { flex: 1; overflow-y: auto; padding: 10px; font-size: 15px; }
+        .input-bar { display: flex; padding: 10px; gap: 10px; background: #f9f9f9; border-top: 1px solid #eee; }
+        .input-bar input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 20px; outline: none; }
+        
+        #status-msg { text-align: center; padding: 10px; background: #fff3e0; color: #e65100; font-weight: bold; display: none; border-bottom: 1px solid #ffe0b2; }
+
+        /* אנימציית טעינה פשוטה */
+        .loader { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #e65100; margin-right: 5px; animation: pulse 1s infinite; }
+        @keyframes pulse { 0% { opacity: 0.3; } 50% { opacity: 1; } 100% { opacity: 0.3; } }
+    </style>
+</head>
+<body>
+
+<div id="setup-screen">
+    <div class="form-card">
+        <h2>VideoChat</h2>
+        <div class="field">
+            <label>שם מלא:</label>
+            <input type="text" id="u-name" placeholder="הכנס שם...">
+        </div>
+        <div class="field">
+            <label>תאריך לידה:</label>
+            <input type="date" id="u-dob">
+        </div>
+        <div class="field">
+            <label>מין:</label>
+            <select id="u-gender">
+                <option value="" disabled selected>בחר מין...</option>
+                <option value="זכר">זכר</option>
+                <option value="נקבה">נקבה</option>
+            </select>
+        </div>
+        <button class="btn-start" style="width: 100%;" onclick="saveUser()">המשך לשיחות</button>
+    </div>
+</div>
+
+<div id="status-msg"><span class="loader"></span>מחפש משתמש פנוי...</div>
+
+<div class="video-grid">
+    <div class="video-box">
+        <video id="remoteVideo" autoplay playsinline></video>
+        <div class="info-tag">הצד השני: <span id="partner-gender">?</span></div>
+    </div>
+    <div class="video-box">
+        <video id="localVideo" autoplay muted playsinline></video>
+        <div class="info-tag">אתה</div>
+    </div>
+</div>
+
+<div class="controls">
+    <button id="start-btn" class="btn-start" onclick="toggleSearch()">התחלה</button>
+    <button class="btn-switch" onclick="switchCamera()">החלף מצלמה</button>
+    <button id="report-btn" class="btn-report" onclick="confirmReport()" disabled>דיווח</button>
+</div>
+
+<div id="chat-section">
+    <div id="messages"></div>
+    <div class="input-bar">
+        <input type="text" id="chatInput" placeholder="כתוב משהו...">
+        <button onclick="sendText()" style="color:#ff8000; background:none;">שלח</button>
+    </div>
+</div>
+
+<script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyB_ld3VrntNgM3Pgc4jyZL2hKzUMSp-o10",
+      authDomain: "live-video-20fca.firebaseapp.com",
+      projectId: "live-video-20fca",
+      storageBucket: "live-video-20fca.firebasestorage.app",
+      messagingSenderId: "590706792062",
+      appId: "1:590706792062:web:1b75b2871f1068f44aaa2f",
+      databaseURL: "https://live-video-20fca-default-rtdb.firebaseio.com/"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    let localStream, isSearching = false, searchTimeout, currentFacingMode = "user", isConnected = false;
+
+    function saveUser() {
+        const name = document.getElementById('u-name').value;
+        const dob = document.getElementById('u-dob').value;
+        const gender = document.getElementById('u-gender').value;
+        if(!name || !dob || !gender) return alert("נא למלא את כל הפרטים");
+        localStorage.setItem('myChatProfile', JSON.stringify({name, dob, gender}));
+        document.getElementById('setup-screen').style.display = 'none';
+        setupCamera();
+    }
+
+    async function setupCamera() {
+        if (localStream) localStream.getTracks().forEach(track => track.stop());
+        try {
+            localStream = await navigator.mediaDevices.getUserMedia({ 
+                video: { facingMode: currentFacingMode }, 
+                audio: true 
+            });
+            document.getElementById('localVideo').srcObject = localStream;
+        } catch (e) { console.error("Camera access error"); }
+    }
+
+    function toggleSearch() {
+        if (!isSearching && !isConnected) {
+            startSearching();
+        } else {
+            resetConnection();
+        }
+    }
+
+    function startSearching() {
+        isSearching = true;
+        document.getElementById('start-btn').innerText = "ביטול";
+        document.getElementById('status-msg').style.display = "block";
+        
+        // טיימר פנימי של 30 שניות (בלי להראות למשתמש)
+        searchTimeout = setTimeout(() => {
+            if (isSearching) {
+                resetConnection();
+                alert("לא נמצא משתמש כרגע, נסה שוב");
+            }
+        }, 30000);
+
+        // כאן תתבצע קריאה לשרת ה-Matchmaking (Render)
+        // לצורך בדיקה, נדמה חיבור אחרי 4 שניות:
+        setTimeout(() => { if(isSearching) connectUI(); }, 4000);
+    }
+
+    function connectUI() {
+        clearTimeout(searchTimeout);
+        isSearching = false;
+        isConnected = true;
+        document.getElementById('status-msg').style.display = "none";
+        document.getElementById('start-btn').innerText = "הבא (Next)";
+        document.getElementById('chat-section').style.display = "flex";
+        document.getElementById('report-btn').disabled = false;
+        document.getElementById('messages').innerHTML = "<div style='text-align:center; color:#888'>התחלתם לדבר!</div>";
+    }
+
+    function resetConnection() {
+        clearTimeout(searchTimeout);
+        isSearching = false;
+        isConnected = false;
+        document.getElementById('start-btn').innerText = "התחלה";
+        document.getElementById('status-msg').style.display = "none";
+        document.getElementById('chat-section').style.display = "none";
+        document.getElementById('report-btn').disabled = true;
+        document.getElementById('messages').innerHTML = "";
+        document.getElementById('remoteVideo').srcObject = null;
+    }
+
+    function confirmReport() {
+        if (confirm("האם אתה בטוח שברצונך לדווח על משתמש זה?")) {
+            const profile = JSON.parse(localStorage.getItem('myChatProfile'));
+            db.ref('reports/').push({
+                reporter: profile.name,
+                timestamp: firebase.database.ServerValue.TIMESTAMP
+            });
+            alert("דיווח התקבל.");
+            resetConnection();
+        }
+    }
+
+    function sendText() {
+        const input = document.getElementById('chatInput');
+        if(!input.value) return;
+        const msgDiv = document.getElementById('messages');
+        const d = document.createElement('div');
+        d.innerHTML = `<b style="color:#ff8000">אתה:</b> ${input.value}`;
+        msgDiv.appendChild(d);
+        input.value = '';
+        msgDiv.scrollTop = msgDiv.scrollHeight;
+    }
+
+    async function switchCamera() {
+        currentFacingMode = (currentFacingMode === "user") ? "environment" : "user";
+        await setupCamera();
+    }
+
+    if(localStorage.getItem('myChatProfile')) {
+        document.getElementById('setup-screen').style.display = 'none';
+        setupCamera();
+    }
+</script>
+</body>
+</html>
+
