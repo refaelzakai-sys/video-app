@@ -1,0 +1,23 @@
+{
+  "name": "מי - פה",
+  "short_name": "מי-פה",
+  "description": "מספיק אמיץ ללחוץ שוב?",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "https://i.ibb.co/pv5Rd5gG/1777160152763.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://i.ibb.co/pv5Rd5gG/1777160152763.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
+
