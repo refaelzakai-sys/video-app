@@ -1,7 +1,7 @@
 {
   "name": "מי - פה",
   "short_name": "מי - פה",
-  "start_url": "/",
+  "start_url": "/video-app/index.html",
   "display": "standalone",
   "background_color": "#000000",
   "theme_color": "#000000",
